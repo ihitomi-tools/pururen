@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#14171c">
 <title>ぷるれん</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -44,6 +44,7 @@
     -webkit-tap-highlight-color: transparent;
   }
   * { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+  html, body { touch-action: manipulation; -webkit-text-size-adjust: 100%; }   /* ダブルタップでの拡大を、ブラウザにさせない */
   .app { touch-action: none; }
   .overlay { touch-action: pan-y; }
   button { font: inherit; color: inherit; }
@@ -2306,7 +2307,20 @@ board.addEventListener('pointerup', e => endDrag(e, false));
 board.addEventListener('pointercancel', e => endDrag(e, true));
 
 // 長押しメニュー・文字選択・ピンチ拡大を止める
-['contextmenu', 'selectstart', 'gesturestart', 'dblclick'].forEach(t => document.addEventListener(t, e => e.preventDefault()));
+['contextmenu', 'selectstart', 'dblclick'].forEach(t => document.addEventListener(t, e => e.preventDefault()));
+// ===== iPhoneで、画面が勝手に拡大しないように =====
+// ① ピンチ（2本指）の拡大：iPhone独自の gesture イベントを止める
+['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
+// ② 2本指で触れている間の動きを止める（スワイプ中に、別の指が触れてしまったとき）
+document.addEventListener('touchmove', e => { if (e.touches && e.touches.length > 1 && e.cancelable) e.preventDefault(); }, { passive: false });
+// ③ ダブルタップでの拡大：すばやい2回目のタップの「指を離したとき」を止める。
+//    ただし、ボタン・スライダーなどは止めない（止めると、すばやく押したときに、2回目が効かなくなるため）
+let lastTouchEnd = 0;
+document.addEventListener('touchend', e => {
+  const now = Date.now(), el = e.target && e.target.closest ? e.target.closest('button, input, summary, label, select, a') : null;
+  if (!el && now - lastTouchEnd < 350 && e.cancelable) e.preventDefault();
+  lastTouchEnd = now;
+}, { passive: false });
 
 /* ================= 画面の部品 ================= */
 // ===== くわしい設定（1〜10）。普段は、設定画面の下のほうに、たたんである =====
