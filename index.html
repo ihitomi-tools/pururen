@@ -43,7 +43,8 @@
     padding-right: max(16px, env(safe-area-inset-right, 0px));
     -webkit-tap-highlight-color: transparent;
   }
-  * { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+  * { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-user-drag: none; }
+  html, body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   html, body { touch-action: manipulation; -webkit-text-size-adjust: 100%; }   /* ダブルタップでの拡大を、ブラウザにさせない */
   .app { touch-action: none; }
   .overlay { touch-action: pan-y; }
@@ -2321,6 +2322,28 @@ document.addEventListener('touchend', e => {
   if (!el && now - lastTouchEnd < 350 && e.cancelable) e.preventDefault();
   lastTouchEnd = now;
 }, { passive: false });
+// ④ 長押し・ドラッグで出る「拡大鏡（ルーペ）」や、選択・コピーのメニューを出さない。
+//    (a) 盤面に指が触れた瞬間に、ブラウザの標準の動き（長押し→選択→ルーペ）を止める。
+//        ただし、iPhoneによっては、これをすると、盤面の操作そのものが効かなくなるかもしれないので、
+//        「指を大きく動かしたのに、盤面の動き(pointermove)が1回も届かなかった」ときは、この機能を自動でやめて、次からは使わない。
+//    (b) もし文字などが選択されてしまっても、すぐに選択を消す
+let noTouchStartBlock = lsGet('ren4-nots', '0') === '1', tsActive = false, tsX = 0, tsY = 0, tsFar = false, ptrMoves = 0;
+board.addEventListener('pointermove', () => { ptrMoves++; });
+board.addEventListener('touchstart', e => {
+  if (noTouchStartBlock || !e.touches || e.touches.length !== 1) return;
+  tsActive = true; tsFar = false; ptrMoves = 0; tsX = e.touches[0].clientX; tsY = e.touches[0].clientY;
+  if (e.cancelable) e.preventDefault();
+}, { passive: false });
+board.addEventListener('touchmove', e => {
+  if (tsActive && e.touches && e.touches[0] && Math.hypot(e.touches[0].clientX - tsX, e.touches[0].clientY - tsY) > 24) tsFar = true;
+}, { passive: true });
+function tsFinish() {
+  if (tsActive && tsFar && ptrMoves === 0) { noTouchStartBlock = true; lsSet('ren4-nots', '1'); }   // 操作が届かなかった → この機能は、やめる
+  tsActive = false;
+}
+board.addEventListener('touchend', tsFinish, { passive: true });
+board.addEventListener('touchcancel', () => { tsActive = false; }, { passive: true });
+document.addEventListener('selectionchange', () => { try { const sel = window.getSelection(); if (sel && !sel.isCollapsed) sel.removeAllRanges(); } catch (err) {} });
 
 /* ================= 画面の部品 ================= */
 // ===== くわしい設定（1〜10）。普段は、設定画面の下のほうに、たたんである =====
