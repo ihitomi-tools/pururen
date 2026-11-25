@@ -332,6 +332,14 @@
   .timebar span.gain.show { animation: gainup 1s ease-out both; }
   @keyframes gainup { 0% { opacity: 0; transform: translateY(8px) scale(.8); } 15% { opacity: 1; transform: none; } 70% { opacity: 1; } 100% { opacity: 0; transform: translateY(-8px); } }
   @media (prefers-reduced-motion: reduce) { .timebar span.gain.show { animation: none; } }
+  .bestlist { text-align: left; border-top: 1px solid var(--line); padding-top: 8px; }
+  .bl-t { font-size: .72rem; color: var(--sub); letter-spacing: .08em; margin-bottom: 4px; }
+  .bl-g { display: grid; grid-template-columns: auto 1fr 1fr; gap: 3px 6px; align-items: center; font-size: .78rem; }
+  .bl-h { font-size: .66rem; color: var(--sub); text-align: right; }
+  .bl-r { font-weight: 800; font-size: .72rem; color: var(--sub); }
+  .bl-v { text-align: right; font-family: var(--font-num); font-weight: 700; font-variant-numeric: tabular-nums; padding: 2px 8px; border-radius: 8px; background: rgba(11,14,26,.45); }
+  .bl-v.none { color: var(--sub); font-weight: 400; }
+  .bl-v.on { background: linear-gradient(180deg, rgba(255,232,150,.25), rgba(255,214,89,.12)); outline: 1px solid rgba(255,214,89,.55); color: var(--accent-hi); }
   .toast { position: absolute; z-index: 9; left: 50%; top: 1%; translate: -50% 0; padding: 7px 18px; border-radius: 999px; pointer-events: none; white-space: nowrap;
     font-weight: 800; font-size: .95rem; color: var(--accent-ink); background: linear-gradient(180deg, var(--accent-hi) 0%, var(--accent) 100%);
     box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 3px 0 var(--accent-lo), 0 6px 16px rgba(0,0,0,.45); }
@@ -436,7 +444,7 @@
         </details>
         <button class="go" id="bStart" type="button">スタート</button>
         <button class="go sub" id="bHow" type="button">あそびかた・チュートリアル</button>
-        <div class="note" id="bestNote"></div>
+        <div class="bestlist" id="bestNote" aria-label="自己ベスト"></div>
         <div class="note" id="saveNote" hidden>「スタート」で新しく始めると、保存したゲームは消えます。</div>
         <div class="note">昔遊んで大好きだった「極小キロバイト宣言！」の『連続連動連結連鎖』を、もう一度遊びたい一心で作りました（私にとっては神ゲーです）。原作そのものではなく、記憶と公開されている説明をもとに作った、非公式のオマージュ作品です。原作・配信元とは関係ありません。盤面の広さ・ゲージの長さ・点数などの数値は推定です。</div>
       </div>
@@ -874,7 +882,24 @@ function newGame() {
   lastStage = 0; clearSave();
   showOverlay(null);
 }
-function bestKey() { return 'ren4-best-' + settings.mode + '-' + settings.colors + '-' + settings.gaugeLevel; }
+// 自己ベストの保存：「モード × 難易度（色の数）」ごと。ゲージの長さなどの設定を変えても、記録は別にならない
+const bestKeyOf = (mode, colors) => 'ren4-best2-' + mode + '-' + colors;
+function bestKey() { return bestKeyOf(settings.mode, settings.colors); }
+// 前の版では「ゲージの長さ」ごとに別々に保存していた。同じモード・難易度の中で、いちばん高いものを引き継ぐ（一度だけ）
+(function migrateBest() {
+  if (lsGet('ren4-best-migrated', '0') === '1') return;
+  try {
+    const top = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i), m = /^ren4-best-(time|endless)-([456])-.+$/.exec(k || '');
+      if (!m) continue;
+      const v = parseInt(localStorage.getItem(k), 10) || 0, id = m[1] + '-' + m[2];
+      if (v > (top[id] || 0)) top[id] = v;
+    }
+    for (const id of Object.keys(top)) { const [mode, colors] = id.split('-'); const nk = bestKeyOf(mode, colors); if (top[id] > (parseInt(lsGet(nk, '0'), 10) || 0)) lsSet(nk, String(top[id])); }
+  } catch (e) {}
+  lsSet('ren4-best-migrated', '1');
+})();
 
 function gameOver(byQuit) {
   if (state === 'over') return;
@@ -2379,6 +2404,20 @@ function syncAdv() {
     row.querySelector('b').textContent = v; row.querySelector('small').textContent = a.note();
   });
 }
+// 自己ベストの一覧（モード × 難易度）。いま選んでいる組み合わせは、色をつける
+function renderBestList() {
+  const el = $('bestNote'); if (!el) return;
+  const modes = [['time', '時間制限'], ['endless', 'エンドレス']], diffs = [[4, 'EASY'], [5, 'NORMAL'], [6, 'HARD']];
+  let h = '<div class="bl-h"></div>' + modes.map(m => '<div class="bl-h">' + m[1] + '</div>').join('');
+  for (const [c, name] of diffs) {
+    h += '<div class="bl-r">' + name + '</div>';
+    for (const [m] of modes) {
+      const v = parseInt(lsGet(bestKeyOf(m, c), '0'), 10) || 0;
+      h += '<div class="bl-v' + (m === settings.mode && c === settings.colors ? ' on' : '') + (v ? '' : ' none') + '">' + (v ? v.toLocaleString('ja-JP') : '—') + '</div>';
+    }
+  }
+  el.innerHTML = '<div class="bl-t">自己ベスト</div><div class="bl-g">' + h + '</div>';
+}
 function refreshOptions() {
   document.querySelectorAll('.seg').forEach(sg => {
     const k = sg.dataset.key;
@@ -2391,7 +2430,7 @@ function refreshOptions() {
   applyWobble();
   applyNext();
   best = parseInt(lsGet(bestKey(), '0'), 10) || 0;
-  $('bestNote').textContent = best > 0 ? 'この設定の自己ベスト: ' + best.toLocaleString('ja-JP') : 'この設定の自己ベストはまだありません';
+  renderBestList();
 }
 document.querySelectorAll('.seg').forEach(sg => sg.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
