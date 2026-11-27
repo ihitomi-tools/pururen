@@ -169,7 +169,8 @@
   }
   /* ===== プルプル版（石のデザイン） ===== */
   .skin-jelly .gem { transform-origin: 50% 88%; }
-  .skin-neko .gem { inset: 0; }                                                                   /* ねこは、少し大きく見せる（マスの余白をなくす） */
+  .skin-neko .gem { inset: 0; }
+  .catplate .face { background: radial-gradient(circle at 50% 68%, var(--plate, transparent) 0%, transparent 82%), radial-gradient(circle at 50% 62%, var(--glow) 0%, transparent 70%), linear-gradient(160deg, #1f2433, #0e1118); }   /* ねこの色の台座 */                                                                   /* ねこは、少し大きく見せる（マスの余白をなくす） */
   .app.skin-jelly .tile .gem::before { animation: none; opacity: 0; transition: opacity .12s; }                  /* ふだんは、この上のあわて顔の層は見えない */
   .app.skin-jelly .tile.hot .gem { background-image: none; }                                                   /* あわて顔のときは、下の通常の顔は描かない（軽くするため） */
   .app.skin-jelly .tile.hot .gem::before, .app.skin-jelly .tile.out .gem::before { opacity: 1; transition: none; }   /* もうすぐ消える・消える: あわて顔にすぐ切りかわる */
@@ -755,6 +756,7 @@ function applySkin() {
   const app = document.querySelector('.app');
   app.classList.toggle('skin-jelly', jelly);
   app.classList.toggle('skin-neko', neko);
+  app.classList.toggle('catplate', neko && !!drawCatStyle.plate);
   els.forEach(el => setTileColors(el, el._color));  // ふち・光の色も、石のデザインに合わせて替える
   $('bSkin').textContent = '石：' + SKIN_NAME[settings.skin];
 }
@@ -1636,14 +1638,14 @@ function drawJelly(kind, S, panic) {
 
 /* ===== 大人かわいい洗練パステル版「ねこ」の石（Geminiのデザイン。drawCat の後半だけ、組み込み時に補った） ===== */
 
-// パステルを、ほんの少しあざやかに調整した色（暗い背景でも、どの猫か見分けやすいように）
+// パステルを、見やすさのために、さらにあざやかに調整した色（「D案」）。暗い背景でも、どの猫か見分けやすい
 const drawCatPalette = [
-  { "base": "#ee6780", "light": "#ffccd7", "dark": "#963d50", "mark": "#fff4f6", "ear": "#d96c82" },
-  { "base": "#5badf0", "light": "#c9e7ff", "dark": "#2e608f", "mark": "#f2f8ff", "ear": "#e89eb0" },
-  { "base": "#6fd2a2", "light": "#cdf8e2", "dark": "#2a7b57", "mark": "#44ab7a", "ear": "#e89eb0" },
-  { "base": "#fddb77", "light": "#fff8d9", "dark": "#b28517", "mark": "#ecad29", "ear": "#e89890" },
-  { "base": "#9f66f0", "light": "#dbc7ff", "dark": "#57388c", "mark": "#f7f2ff", "ear": "#e896ba" },
-  { "base": "#ff9c5c", "light": "#ffdfc6", "dark": "#a8511d", "mark": "#e26c26", "ear": "#e88a82" }
+  { "base": "#ff4769", "light": "#ffc3d0", "dark": "#94364a", "mark": "#fff4f6", "ear": "#d96c82" },
+  { "base": "#3da8ff", "light": "#c0e3ff", "dark": "#275c8d", "mark": "#f2f8ff", "ear": "#e89eb0" },
+  { "base": "#51e19b", "light": "#bdffdd", "dark": "#247953", "mark": "#44ab7a", "ear": "#e89eb0" },
+  { "base": "#ffd866", "light": "#fff6d0", "dark": "#b2830f", "mark": "#ecad29", "ear": "#e89890" },
+  { "base": "#9348ff", "light": "#d5beff", "dark": "#52318a", "mark": "#f7f2ff", "ear": "#e896ba" },
+  { "base": "#ff934d", "light": "#ffdabd", "dark": "#a74c15", "mark": "#e26c26", "ear": "#e88a82" }
 ];
 
 function drawCatBodyPath(g, kind, S) {
@@ -1738,6 +1740,9 @@ function drawCatBodyPath(g, kind, S) {
   }
 }
 
+// お腹などの白い部分の色：bellyTint が null なら、いままでの色。数値なら、体の色に、その割合だけ白を混ぜた色
+const rgbA = (rgb, a) => rgb.replace('rgb(', 'rgba(').replace(')', ', ' + a + ')');   // mixHex の結果 'rgb(r,g,b)' に、透明度をつける
+function bellyFill(C, orig) { const t = drawCatStyle.bellyTint; return t == null ? orig : rgbA(mixHex(C.base, '#ffffff', t), 0.95); }
 function drawCatPattern(b, kind, C, S) {
   const c = S * 0.5;
   b.save();
@@ -1754,13 +1759,13 @@ function drawCatPattern(b, kind, C, S) {
   };
   switch (kind) {
     case 0: // ローズ：胸元のやさしいクリーム色＋上品な内耳
-      b.fillStyle = hexRgba(C.mark, 0.82);
+      b.fillStyle = bellyFill(C, hexRgba(C.mark, 0.82));
       b.beginPath(); b.ellipse(c, S * 0.85, S * 0.18, S * 0.12, 0, 0, Math.PI * 2); b.fill();
       softEar(S * 0.28, S * 0.29, S * 0.042, S * 0.062, -0.22);
       softEar(S * 0.72, S * 0.29, S * 0.042, S * 0.062, 0.22);
       break;
     case 1: // パウダーブルー：端正なハチワレ＋すらっとした内耳
-      b.fillStyle = hexRgba(C.mark, 0.92);
+      b.fillStyle = bellyFill(C, hexRgba(C.mark, 0.92));
       b.beginPath();
       b.moveTo(c, S * 0.46);
       b.quadraticCurveTo(S * 0.70, S * 0.57, S * 0.88, S * 0.75);
@@ -1772,7 +1777,7 @@ function drawCatPattern(b, kind, C, S) {
       b.beginPath(); b.moveTo(S * 0.79, S * 0.16); b.lineTo(S * 0.65, S * 0.31); b.lineTo(S * 0.76, S * 0.37); b.closePath(); b.fill();
       break;
     case 2: // セージミント：繊細な3本とら縞＋たれ耳の陰影＋明るいお腹
-      b.fillStyle = 'rgba(236, 252, 244, 0.78)';
+      b.fillStyle = bellyFill(C, 'rgba(236, 252, 244, 0.78)');
       b.beginPath(); b.ellipse(c, S * 0.86, S * 0.21, S * 0.12, 0, 0, Math.PI * 2); b.fill();
       b.strokeStyle = hexRgba(C.mark, 0.75);
       b.lineWidth = S * 0.032; b.lineCap = 'round';
@@ -1785,7 +1790,7 @@ function drawCatPattern(b, kind, C, S) {
       b.beginPath(); b.arc(S * 0.83, S * 0.40, S * 0.105, Math.PI - 1.25, Math.PI + 0.35); b.stroke();
       break;
     case 3: // シャンパンハニー：繊細なおでこ縞＋ふっくら白い胸元＋内耳
-      b.fillStyle = 'rgba(255, 252, 238, 0.85)';
+      b.fillStyle = bellyFill(C, 'rgba(255, 252, 238, 0.85)');
       b.beginPath(); b.ellipse(c, S * 0.84, S * 0.20, S * 0.13, 0, 0, Math.PI * 2); b.fill();
       b.strokeStyle = hexRgba(C.mark, 0.72);
       b.lineWidth = S * 0.028; b.lineCap = 'round';
@@ -1796,7 +1801,7 @@ function drawCatPattern(b, kind, C, S) {
       softEar(S * 0.72, S * 0.29, S * 0.04, S * 0.06, 0.24);
       break;
     case 4: // モーブラベンダー：雲のような白い胸毛＋小さな内耳
-      b.fillStyle = hexRgba(C.mark, 0.9);
+      b.fillStyle = bellyFill(C, hexRgba(C.mark, 0.9));
       b.beginPath();
       b.arc(S * 0.37, S * 0.81, S * 0.13, 0, Math.PI * 2);
       b.arc(c, S * 0.79, S * 0.15, 0, Math.PI * 2);
@@ -1806,7 +1811,7 @@ function drawCatPattern(b, kind, C, S) {
       softEar(S * 0.69, S * 0.29, S * 0.036, S * 0.052, 0.18);
       break;
     default: // アプリコットピーチ：S字しっぽの縞模様＋おでこ縞＋明るいお腹＋内耳
-      b.fillStyle = 'rgba(255, 247, 238, 0.84)';
+      b.fillStyle = bellyFill(C, 'rgba(255, 247, 238, 0.84)');
       b.beginPath(); b.ellipse(S * 0.42, S * 0.85, S * 0.19, S * 0.12, 0, 0, Math.PI * 2); b.fill();
       b.strokeStyle = hexRgba(C.mark, 0.76);
       b.lineWidth = S * 0.032; b.lineCap = 'round';
@@ -2068,7 +2073,7 @@ function drawCatFace(g, kind, S, panic) {
 }
 
 // ふち取りの調整値（色の見やすさを調整するときに使う）
-const drawCatStyle = { outlineW: 0.025, outlineA: 0.82, outlineMix: 0.52 };
+const drawCatStyle = { outlineW: 0.025, outlineA: 0.82, outlineMix: 0.52, outlineColored: false, bellyTint: 0.55, plate: true };   // bellyTint: お腹などの白い部分を、体の色に近づける度合い(0〜1。null=白のまま) / plate: マスに、その色の台座を敷くか
 function drawCat(kind, S, panic) {
   const C = drawCatPalette[kind] || drawCatPalette[0];
 
@@ -2110,7 +2115,7 @@ function drawCat(kind, S, panic) {
   // 3. ふち取り（暗い背景でも、淡い色の輪郭がぼやけないように、同系の濃い色で締める）
   drawCatBodyPath(b, kind, S);
   b.lineJoin = 'round';
-  b.lineWidth = S * drawCatStyle.outlineW; b.strokeStyle = hexRgba(mixHex(C.base, C.dark, drawCatStyle.outlineMix), drawCatStyle.outlineA); b.stroke();
+  b.lineWidth = S * drawCatStyle.outlineW; b.strokeStyle = drawCatStyle.outlineColored ? rgbA(mixHex(C.base, C.dark, drawCatStyle.outlineMix), drawCatStyle.outlineA) : '#000000'; b.stroke();   // outlineColored=false: いままでどおりの黒
 
   // 4. やわらかいつや（頭の左上に、小さくふんわり）
   b.save(); b.translate(S * 0.33, S * 0.33); b.rotate(-0.5);
@@ -2157,12 +2162,13 @@ function ensureNekoStyles(force) {
 }
 // 石の色（ふち・光・はじける粒）。ねこ版は、パステルの色を使う
 function tileColors(color) {
-  if (settings.skin === 'neko') { const C = drawCatPalette[color]; return { base: C.base, light: C.light, glow: hexRgba(C.base, 0.5) }; }
+  if (settings.skin === 'neko') { const C = drawCatPalette[color]; return { base: C.base, light: C.light, glow: hexRgba(C.base, 0.5), plate: hexRgba(C.base, 0.62) }; }
   return COLORS[color];
 }
 function setTileColors(el, color) {
   const c = tileColors(color);
   el.style.setProperty('--col', c.base); el.style.setProperty('--col-l', c.light); el.style.setProperty('--glow', c.glow);
+  el.style.setProperty('--plate', c.plate || 'transparent');
 }
 function makeEl(p) {
   const el = document.createElement('div');
