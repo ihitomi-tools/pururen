@@ -408,6 +408,23 @@
   @keyframes glow { from { box-shadow: inset 0 1.5px 0 rgba(255,255,255,.7), 0 3px 0 #a87000, 0 0 0 rgba(255,214,89,0); } to { box-shadow: inset 0 1.5px 0 rgba(255,255,255,.7), 0 3px 0 #a87000, 0 0 14px rgba(255,214,89,.85); } }
   @media (prefers-reduced-motion: reduce) { .tuthint, .coachbtns .go { animation: none; } }
   @media (prefers-reduced-motion: reduce) { .chip, .seg button, .go { transition: none; } .chip:active, .go:active { transform: none; } }
+
+  /* ===== タイトル画面：画面いっぱいの夜空に、ぷるぷるロゴとねこ ===== */
+  #ovReady { position: fixed; inset: 0; z-index: 30; border: 0; border-radius: 0; box-shadow: none;
+    padding: max(10px, env(safe-area-inset-top)) 14px max(18px, env(safe-area-inset-bottom));
+    background:
+      radial-gradient(circle at 8% 6%, rgba(255,243,207,.55) 0 1.5px, transparent 2px),
+      radial-gradient(circle at 92% 9%, rgba(255,243,207,.5) 0 2px, transparent 2.5px),
+      radial-gradient(circle at 50% 3%, rgba(255,243,207,.4) 0 1.5px, transparent 2px),
+      radial-gradient(circle at 5% 46%, rgba(255,243,207,.35) 0 1.5px, transparent 2px),
+      radial-gradient(circle at 95% 52%, rgba(255,243,207,.4) 0 2px, transparent 2.5px),
+      radial-gradient(ellipse at 50% 22%, #3a2f78 0%, #1b1a45 55%, #0b0d24 100%); }
+  #ovReady .sheet.title { background: none; border: 0; box-shadow: none; padding: 0; max-width: 390px; gap: 10px; }
+  #titleArt { display: block; flex: none; width: 100%; margin: 0 auto -4px; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  #ovReady #bStart { font-size: 1.5rem; padding: 14px; border-radius: 999px; letter-spacing: .08em; }
+  .autosave { margin: -2px 0 2px; font-size: .74rem; line-height: 1.5; color: #cfd8ff; }
+  .autosave b { display: inline-block; margin-right: 2px; padding: 1px 9px; border-radius: 999px; background: rgba(255, 213, 74, .16); border: 1px solid rgba(255, 213, 74, .55); color: #ffe38a; font-weight: 800; }
+  #ovReady .note, #ovReady .bestlist, #ovReady .adv { border-top-color: rgba(168, 181, 214, .22); }
 </style>
 <style>
   /* ホーム画面から開いたとき、iPhoneの上の時刻バー・下のホームバーに重ならないようにする */
@@ -451,12 +468,14 @@
     </div>
 
     <div class="overlay" id="ovReady">
-      <div class="sheet">
-        <h2>ぷるれん</h2>
+      <div class="sheet title">
+        <canvas id="titleArt" role="img" aria-label="ぷるれん　ねこをつなげて、ぷるんと連鎖"></canvas>
         <div class="resumebox" id="resumeBox" hidden>
           <button class="go" id="bLoad" type="button">つづきから</button>
           <div class="note" id="resumeNote"></div>
         </div>
+        <button class="go" id="bStart" type="button">スタート</button>
+        <p class="autosave"><b>オートセーブつき</b> やめても「つづきから」で再開OK</p>
         <div class="opt"><span class="lab">モード</span>
           <div class="seg" data-key="mode"><button type="button" data-v="time">時間制限</button><button type="button" data-v="endless">エンドレス</button></div></div>
         <div class="opt"><span class="lab">難易度</span>
@@ -482,7 +501,6 @@
           </div>
           <div class="advbody"></div>
         </details>
-        <button class="go" id="bStart" type="button">スタート</button>
         <button class="go sub" id="bHow" type="button">あそびかた・チュートリアル</button>
         <div class="bestlist" id="bestNote" aria-label="自己ベスト"></div>
         <div class="note" id="saveNote" hidden>「スタート」で新しく始めると、保存したゲームは消えます。</div>
@@ -555,6 +573,330 @@
 
 
 <script>
+/* タイトル画面の「ぷるぷるロゴ」と「ねこが降ってくる演出」（Geminiの案をもとに調整） */
+const TitleArt = (() => {
+  const W = 390, H = 380;          // 基準サイズ
+  const FPS_MS = 1000 / 30;        // 最大30fps
+  const SETTLE_T = 1.45;           // 降ってくる演出が落ち着く目安（秒）
+  const IDLE_LIMIT = 6.0;          // 落ち着いてから止めるまでの時間（秒）
+  const LOGO_TEXT = 'ぷるれん';
+  const SUB_TEXT = 'ねこをつなげて、ぷるんと連鎖';
+
+  // ねこの配置：上7匹（小）＋下5匹（大）。yは足もと
+  const CAT_LAYOUT = [
+    { kind: 0, size: 46, x: 38,  y: 78,  rot: -0.08 },
+    { kind: 1, size: 46, x: 90,  y: 84,  rot:  0.06 },
+    { kind: 2, size: 46, x: 142, y: 78,  rot: -0.05 },
+    { kind: 3, size: 46, x: 195, y: 84,  rot:  0.07 },
+    { kind: 4, size: 46, x: 248, y: 78,  rot: -0.06 },
+    { kind: 5, size: 46, x: 300, y: 84,  rot:  0.08 },
+    { kind: 0, size: 46, x: 352, y: 78,  rot:  0.05 },
+    { kind: 2, size: 74, x: 74,  y: 318, rot: -0.10 },
+    { kind: 4, size: 76, x: 316, y: 304, rot:  0.10 },
+    { kind: 3, size: 78, x: 246, y: 334, rot:  0.07 },
+    { kind: 0, size: 106, x: 174, y: 346, rot: 0.06 },
+    { kind: 1, size: 100, x: 136, y: 364, rot: -0.08 },
+  ];
+
+  let cv, ctx, getCatFn;
+  let dpr = 1, scale = 1;
+  let rafId = 0, running = false, stoppedByUser = false;
+  let reduced = false;
+  let startTime = 0, lastFrame = 0, lastDraw = 0, stopAt = 0;
+  let logoCache = [], subCache = null;
+  const catCache = new Map();
+  let letters = [], cats = [];
+  let boundEvents = false;
+
+  function resize() {
+    if (!cv) return;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const cssW = cv.clientWidth || W;
+    scale = cssW / W;
+    const cssH = Math.round(H * scale);
+    cv.style.height = cssH + 'px';
+    cv.width = Math.round(cssW * dpr);
+    cv.height = Math.round(cssH * dpr);
+    if (!running) draw(stopAt, true);
+  }
+
+  // ロゴ1文字ずつの事前描画（ツヤ・ふち・影はここで1回だけ）
+  function buildLogoCache() {
+    const box = 136, fontSize = 84;
+    logoCache = [...LOGO_TEXT].map((ch) => {
+      const c = document.createElement('canvas');
+      c.width = Math.round(box * dpr);
+      c.height = Math.round(box * dpr);
+      const g = c.getContext('2d');
+      g.scale(dpr, dpr);
+      g.font = `800 ${fontSize}px "M PLUS Rounded 1c"`;
+      g.textAlign = 'center';
+      g.textBaseline = 'alphabetic';
+      const cx = box / 2, base = box - 26;
+
+      const grad = g.createLinearGradient(0, base - fontSize, 0, base + 6);
+      grad.addColorStop(0, '#fff7c2');
+      grad.addColorStop(0.52, '#ffd45a');
+      grad.addColorStop(1, '#ff9f43');
+      g.fillStyle = grad;
+      g.fillText(ch, cx, base);
+
+      g.globalCompositeOperation = 'source-atop';
+      const gloss = g.createLinearGradient(cx - 28, base - fontSize, cx + 10, base - fontSize * 0.35);
+      gloss.addColorStop(0, 'rgba(255,255,255,0.62)');
+      gloss.addColorStop(0.6, 'rgba(255,255,255,0.12)');
+      gloss.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = gloss;
+      g.fillRect(0, 0, box, base - fontSize * 0.3);
+      g.fillStyle = 'rgba(255,255,255,0.55)';
+      g.beginPath();
+      g.ellipse(cx - 16, base - fontSize * 0.68, 16, 7, -0.35, 0, Math.PI * 2);
+      g.fill();
+
+      g.globalCompositeOperation = 'destination-over';
+      g.lineJoin = 'round';
+      g.lineCap = 'round';
+      g.lineWidth = 15;
+      g.strokeStyle = '#7a3d00';
+      g.strokeText(ch, cx, base);
+
+      g.shadowColor = 'rgba(15, 8, 35, 0.55)';
+      g.shadowBlur = 10;
+      g.shadowOffsetX = 0;
+      g.shadowOffsetY = 6;
+      g.fillStyle = '#4a2200';
+      g.strokeStyle = '#4a2200';
+      g.strokeText(ch, cx, base + 3);
+      g.fillText(ch, cx, base + 3);
+      return { canvas: c, box, base };
+    });
+  }
+
+  function buildSubCache() {
+    const sw = W, sh = 34;
+    const c = document.createElement('canvas');
+    c.width = Math.round(sw * dpr);
+    c.height = Math.round(sh * dpr);
+    const g = c.getContext('2d');
+    g.scale(dpr, dpr);
+    g.font = '800 15px "M PLUS Rounded 1c"';
+    g.fillStyle = '#cfd8ff';
+    g.textBaseline = 'middle';
+    const chars = [...SUB_TEXT];
+    const gap = 2.4;
+    const widths = chars.map((ch) => g.measureText(ch).width);
+    const total = widths.reduce((a, b) => a + b, 0) + gap * (chars.length - 1);
+    let x = (sw - total) / 2;
+    chars.forEach((ch, i) => { g.fillText(ch, x, sh / 2); x += widths[i] + gap; });
+    subCache = c;
+  }
+
+  function getCatCached(kind, size) {
+    const px = Math.round(size * dpr);
+    const key = `${kind}_${px}`;
+    if (!catCache.has(key)) catCache.set(key, getCatFn(kind, px));
+    return catCache.get(key);
+  }
+
+  function resetEntities(settled) {
+    const xs = [66, 152, 238, 324];
+    letters = xs.map((x, i) => ({
+      x, y: 174, delay: i * 0.07,
+      yOff: settled ? 0 : -240, vy: 0, s: 0, vs: 0,
+      landed: settled, phase: i * 1.15,
+    }));
+    cats = CAT_LAYOUT.map((d, i) => ({
+      ...d, img: getCatCached(d.kind, d.size),
+      delay: 0.3 + i * 0.065,
+      yOff: settled ? 0 : -(d.y + d.size + 20), vy: 0, s: 0, vs: 0,
+      bounces: settled ? 3 : 0, phase: i * 0.85,
+    }));
+  }
+
+  function step(t, dt) {
+    for (const g of letters) {
+      if (t < g.delay) continue;
+      if (!g.landed) {
+        g.vy += 3600 * dt;
+        g.yOff += g.vy * dt;
+        g.s = -0.07;
+        if (g.yOff >= 0) {
+          g.yOff = 0; g.vy = 0; g.landed = true;
+          g.s = 0.34; g.vs = 1.6;       // 着地でぐにゃっと
+        }
+      } else {
+        g.vs += (-190 * g.s - 5.0 * g.vs) * dt;   // やわらかいばね（ぷるぷるが長め）
+        g.s += g.vs * dt;
+      }
+    }
+    for (const c of cats) {
+      if (t < c.delay) continue;
+      if (c.bounces < 3) {
+        c.vy += 3800 * dt;
+        c.yOff += c.vy * dt;
+        if (c.bounces === 0) c.s = -0.06;
+        if (c.yOff >= 0) {
+          c.yOff = 0;
+          if (c.bounces === 0) { c.s = 0.27; c.vs = 1.5; c.vy = -420; }
+          else if (c.bounces === 1) { c.s = 0.16; c.vs = 0.9; c.vy = -190; }
+          else { c.s = 0.07; c.vs = 0.5; c.vy = 0; }
+          c.bounces++;
+        }
+      }
+      if (c.bounces > 0) {
+        c.vs += (-210 * c.s - 8.0 * c.vs) * dt;
+        c.s += c.vs * dt;
+      }
+    }
+  }
+
+  function draw(t, isFinalStatic) {
+    ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    const idleAmp = isFinalStatic || reduced ? 0 : (t > SETTLE_T ? 0.6 : 1);
+
+    if (subCache) {
+      const alpha = reduced || isFinalStatic ? 1 : Math.min(1, Math.max(0, (t - 0.25) / 0.3));
+      if (alpha > 0) {
+        ctx.globalAlpha = alpha;
+        ctx.drawImage(subCache, 0, 190, W, 34);
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    letters.forEach((g, i) => {
+      if (!reduced && t < g.delay) return;
+      const cache = logoCache[i];
+      if (!cache) return;
+      const breathe = g.landed ? Math.sin(t * 2.4 + g.phase) * 0.035 * idleAmp : 0;
+      const sx = Math.max(0.55, 1 + g.s + breathe);
+      const sy = 1 / sx;
+      ctx.save();
+      ctx.translate(g.x, g.y + g.yOff);
+      ctx.scale(sx, sy);
+      ctx.drawImage(cache.canvas, -cache.box / 2, -cache.base, cache.box, cache.box);
+      ctx.restore();
+    });
+
+    for (const c of cats) {
+      if (!reduced && t < c.delay) continue;
+      const breathe = c.bounces >= 3 ? Math.sin(t * 2.0 + c.phase) * 0.018 * idleAmp : 0;
+      const sx = Math.max(0.55, 1 + c.s + breathe);
+      const sy = 1 / sx;
+      ctx.save();
+      ctx.translate(c.x, c.y + c.yOff);
+      ctx.rotate(c.rot);
+      ctx.scale(sx, sy);
+      ctx.drawImage(c.img, -c.size / 2, -c.size, c.size, c.size);
+      ctx.restore();
+    }
+  }
+
+  function loop(now) {
+    if (!running) return;
+    if (document.hidden) { rafId = 0; return; }
+    rafId = requestAnimationFrame(loop);
+    if (now - lastDraw < FPS_MS) return;
+    const dt = Math.min((now - lastFrame) / 1000, 0.05);
+    lastFrame = now;
+    lastDraw = now;
+    const t = (now - startTime) / 1000;
+    step(t, dt);
+    if (t >= stopAt) {
+      running = false;
+      cancelAnimationFrame(rafId);
+      rafId = 0;
+      draw(t, true);
+      return;
+    }
+    draw(t, false);
+  }
+
+  function startLoop() {
+    if (reduced || stoppedByUser || document.hidden) return;
+    if (!running) {
+      running = true;
+      lastFrame = performance.now();
+      lastDraw = 0;
+      rafId = requestAnimationFrame(loop);
+    }
+  }
+
+  function onVisibility() {
+    if (document.hidden) {
+      if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+    } else if (running && !stoppedByUser) {
+      lastFrame = performance.now();
+      lastDraw = 0;
+      rafId = requestAnimationFrame(loop);
+    }
+  }
+
+  return {
+    init(canvas, getCat) {
+      cv = canvas;
+      ctx = cv.getContext('2d');
+      getCatFn = getCat;
+      reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      catCache.clear();
+      resize();
+      buildLogoCache();
+      buildSubCache();
+      resetEntities(reduced);
+      if (!boundEvents) {
+        window.addEventListener('resize', resize);
+        document.addEventListener('visibilitychange', onVisibility);
+        boundEvents = true;
+      }
+      draw(0, reduced);
+    },
+
+    play() {
+      if (!cv) return;
+      stoppedByUser = false;
+      reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      resize();
+      resetEntities(reduced);
+      startTime = performance.now();
+      stopAt = SETTLE_T + IDLE_LIMIT;
+      if (reduced) { running = false; draw(stopAt, true); return; }
+      startLoop();
+    },
+
+    stop() {
+      stoppedByUser = true;
+      running = false;
+      if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+    },
+
+    poke(x, y) {
+      if (!cv || stoppedByUser) return;
+      const lx = x / scale, ly = y / scale;
+      let hit = false;
+      for (let i = cats.length - 1; i >= 0; i--) {
+        const c = cats[i];
+        const dx = lx - c.x, dy = ly - (c.y - c.size * 0.5);
+        if (dx * dx + dy * dy <= (c.size * 0.55) ** 2) {
+          c.s = 0.28; c.vs = 1.8; c.vy = -260; c.bounces = 2;
+          hit = true;
+          break;
+        }
+      }
+      if (!hit) {
+        for (const g of letters) {
+          const dx = lx - g.x, dy = ly - (g.y - 42);
+          if (dx * dx + dy * dy <= 45 * 45) { g.s = 0.4; g.vs = 2.4; break; }
+        }
+      }
+      if (reduced) return;
+      const t = (performance.now() - startTime) / 1000;
+      stopAt = t + IDLE_LIMIT;
+      startLoop();
+    },
+  };
+})();
+
+
 'use strict';
 
 /* ================= 設定（数値はすべて推定。ここを直せば調整できます） ================= */
@@ -1003,7 +1345,20 @@ function showResult(byQuit) {
   $('rBest').textContent = isBest ? '自己ベスト更新！' : '自己ベスト ' + best.toLocaleString('ja-JP');
   showOverlay('over');
 }
+let titleArtReady = false, titleArtWant = false;
+function titleArtSync(on) {     // タイトル画面が出たら演出をはじめ、ほかの画面では止める
+  titleArtWant = on;
+  if (!on) { TitleArt.stop(); return; }
+  const go = () => {
+    if (!titleArtWant) return;
+    if (!titleArtReady) { TitleArt.init($('titleArt'), (kind, px) => drawCat(kind, px, false)); titleArtReady = true; $('titleArt').addEventListener('pointerdown', e => { const r = e.currentTarget.getBoundingClientRect(); TitleArt.poke(e.clientX - r.left, e.clientY - r.top); }); }
+    TitleArt.play();
+  };
+  const fl = document.fonts && document.fonts.load ? Promise.all([document.fonts.load('800 84px "M PLUS Rounded 1c"', 'ぷるれん'), document.fonts.load('800 15px "M PLUS Rounded 1c"', 'ねこをつなげて、ぷるんと連鎖')]) : Promise.resolve();
+  Promise.race([fl, new Promise(r => setTimeout(r, 1500))]).then(go, go);
+}
 function showOverlay(w) {
+  titleArtSync(w === 'ready');
   $('ovReady').hidden = w !== 'ready';
   $('ovPause').hidden = w !== 'pause';
   $('ovOver').hidden = w !== 'over';
@@ -2582,6 +2937,7 @@ function frame(now) {
 }
 syncSound();
 newBoard(); refreshOptions(); refreshResume(); refreshHowBtn();
+titleArtSync(!$('ovReady').hidden);   // はじめにタイトル画面が出ているとき
 requestAnimationFrame(frame);
 </script>
 <script>
