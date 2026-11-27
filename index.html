@@ -559,15 +559,22 @@ const $ = id => document.getElementById(id);
 const board = $('board'), tiles = $('tiles'), holeEl = $('hole'), fx = $('fx'), dragTip = $('dragtip');
 const guideEls = Array.from(document.querySelectorAll('.guide')), guideRow = document.querySelector('.guide.row');
 // 落ちる見た目を始める（位置そのものは、もう新しい場所に移っている）
+// 「クラスを外す → 見た目を確定させる(強制リフロー) → クラスをつける」でアニメーションをやり直す。
+// 大きな塊が消えて、何十個もの石が一斉に動くときに、石1つごとに強制リフローをすると、スマホで重くなる。
+// そこで render() の中では、確定させる作業を、石の数ぶんではなく、まとめて1回だけ行う（batch に、あとでやる作業をためておく）
+let batch = null;
+function flushBatch() { const b = batch; batch = null; if (!b || !b.length) return; void tiles.offsetWidth; for (const f of b) f(); }
 function startDrop(el, fd) {
   el.style.setProperty('--fd', fd);
-  el.classList.remove('dropping'); void el.offsetWidth; el.classList.add('dropping');
-  clearTimeout(el._ft); el._ft = setTimeout(() => el.classList.remove('dropping'), 1000);
+  el.classList.remove('dropping');
+  const go = () => { el.classList.add('dropping'); clearTimeout(el._ft); el._ft = setTimeout(() => el.classList.remove('dropping'), 1000); };
+  if (batch) batch.push(go); else { void el.offsetWidth; go(); }
 }
 // ゲージのアニメーション（ブラウザにまかせる）。ゲージが戻る/増えるたびに、グループ全員で始めなおす
 function startGauge(el, g) {
   el.style.setProperty('--gd', gmOf(g) + 'ms'); el.style.setProperty('--gdl', (-g.t) + 'ms');
-  el.classList.remove('run'); void el.offsetWidth; el.classList.add('run'); el._ep = g.epoch;
+  el.classList.remove('run'); el._ep = g.epoch;
+  if (batch) batch.push(() => el.classList.add('run')); else { void el.offsetWidth; el.classList.add('run'); }
 }
 // ===== ステージ：時間制限モードで、30秒たつごとに1つ上がる（終わらないのを防ぐ）。
 //   はじめの3分は、ゲージが少しずつ速く・回復が少しずつ減るだけ。7ステージ目（3分すぎ）から「ラストスパート」で、時間の減りがどんどん速くなる =====
@@ -780,7 +787,7 @@ function vanish(g) {
   let sy = 0, sx = 0;
   for (const p of gone) {
     sy += p.r; sx += p.c;
-    burst(p);
+    burst(p, n);
     panels.delete(p.id);
     const el = els.get(p.id);
     if (el) { el.classList.add('out'); els.delete(p.id); setTimeout(() => el.remove(), 330); }
@@ -819,15 +826,23 @@ function vanish(g) {
   renderNext();
   resolve();                                  // 落ちたあとにつながったら、そのまま連鎖
 }
-function burst(p) {
+// はじける演出。大きな塊が消えるときに、粒が何百個にもなって、スマホが重くなったり、アプリが落ちたりしないように、数に上限をつける
+const FX_BUDGET = 40, FLARE_MAX = 14, FX_ALIVE_MAX = 110;     // 1回の「消える」で出す粒の総数 / きらめきの最大数 / 画面に同時にある粒の最大数
+function burst(p, n) {
   if (reduceMotion) return;
-  const c = tileColors(p.color);
-  const f = document.createElement('div');
-  f.className = 'flare';
-  f.style.left = ((p.c + 0.5) / N * 100) + '%'; f.style.top = ((p.r + 0.5) / N * 100) + '%';
-  f.style.setProperty('--dl', (Math.random() * 0.12).toFixed(2) + 's');
-  fx.appendChild(f); setTimeout(() => f.remove(), 800);
-  for (let i = 0, nsh = jelly ? 9 : 6; i < nsh; i++) {
+  n = n || 1;
+  const c = tileColors(p.color), alive = fx.children.length;
+  if (!jelly && alive < FX_ALIVE_MAX && (n <= FLARE_MAX || Math.random() < FLARE_MAX / n)) {   // きらめき（ジェリー・ねこ版では、もともと表示しない）
+    const f = document.createElement('div');
+    f.className = 'flare';
+    f.style.left = ((p.c + 0.5) / N * 100) + '%'; f.style.top = ((p.r + 0.5) / N * 100) + '%';
+    f.style.setProperty('--dl', (Math.random() * 0.12).toFixed(2) + 's');
+    fx.appendChild(f); setTimeout(() => f.remove(), 800);
+  }
+  if (alive >= FX_ALIVE_MAX) return;
+  const full = jelly ? 9 : 6, per = Math.floor(FX_BUDGET / n);
+  const nsh = per >= 1 ? Math.min(full, per) : (Math.random() < FX_BUDGET / n ? 1 : 0);   // 小さい塊は、たっぷり。大きい塊は、一部のマスだけ
+  for (let i = 0; i < nsh; i++) {
     const d = document.createElement('div');
     d.className = 'shard';
     d.style.left = ((p.c + 0.5) / N * 100) + '%'; d.style.top = ((p.r + 0.5) / N * 100) + '%';
@@ -2181,6 +2196,7 @@ function makeEl(p) {
   return el;
 }
 function render() {
+  batch = [];                                  // この中での、アニメーションのやり直しは、まとめて1回の強制リフローで行う
   for (const p of panels.values()) {
     let el = els.get(p.id);
     if (!el) {
@@ -2192,7 +2208,8 @@ function render() {
     }
     if (el._r !== p.r) {
       if (p.fall) {                            // 位置はすぐ切りかえて、落ちる見た目だけ別アニメーションで
-        el.style.transition = 'none'; el.style.setProperty('--r', p.r); void el.offsetWidth; el.style.transition = '';
+        el.style.transition = 'none'; el.style.setProperty('--r', p.r);
+        if (batch) batch.push(() => { el.style.transition = ''; }); else { void el.offsetWidth; el.style.transition = ''; }
         startDrop(el, p.fall); p.fall = 0;
       } else { el.style.setProperty('--r', p.r); wobble(el); }
       el._r = p.r;
@@ -2206,6 +2223,7 @@ function render() {
       if (hot !== el._hot) { el.classList.toggle('hot', hot); el._hot = hot; }
     } else if (el._hot) { el.classList.remove('hot'); el._hot = false; }
   }
+  flushBatch();                                // ためておいた作業を、ここで、1回の強制リフローのあとに実行
   if (holeFall) {
     const fd = holeFall, all3 = [holeEl, ...guideEls]; holeFall = 0;
     all3.forEach(e => { e.style.transition = 'none'; });
