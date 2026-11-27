@@ -661,7 +661,6 @@ const TitleArt = (() => {
   const W = 390, H = 380;          // 基準サイズ
   const FPS_MS = 1000 / 30;        // 最大30fps
   const SETTLE_T = 1.45;           // 降ってくる演出が落ち着く目安（秒）
-  const IDLE_LIMIT = 6.0;          // 落ち着いてから止めるまでの時間（秒）
   const LOGO_TEXT = 'ぷるれん';
   const SUB_TEXT = 'ねこをつなげて、ぷるんと連鎖';
 
@@ -685,7 +684,7 @@ const TitleArt = (() => {
   let dpr = 1, scale = 1;
   let rafId = 0, running = false, stoppedByUser = false;
   let reduced = false;
-  let startTime = 0, lastFrame = 0, lastDraw = 0, stopAt = 0;
+  let startTime = 0, lastFrame = 0, lastDraw = 0, stopAt = Infinity, nextKick = 0;   // スタートを押すまで、止めない
   let logoCache = [], subCache = null;
   const catCache = new Map();
   let letters = [], cats = [];
@@ -699,7 +698,7 @@ const TitleArt = (() => {
     const cssH = Math.round(H * scale);
     cv.width = Math.round(cssW * dpr);
     cv.height = Math.round(cssH * dpr);
-    if (!running) draw(stopAt, true);
+    if (!running) draw(SETTLE_T, true);
   }
 
   // ロゴ1文字ずつの事前描画（ツヤ・ふち・影はここで1回だけ）
@@ -796,6 +795,11 @@ const TitleArt = (() => {
   }
 
   function step(t, dt) {
+    if (t > SETTLE_T + 0.4 && t >= nextKick) {                    // ときどき、文字やねこが、ぷるんと揺れる
+      nextKick = t + 1.8 + Math.random() * 2.2;
+      const lg = letters[(Math.random() * letters.length) | 0]; if (lg.landed) { lg.s = 0.2; lg.vs = 1.2; }
+      if (Math.random() < 0.6) { const c = cats[(Math.random() * cats.length) | 0]; if (c.bounces >= 3) { c.s = 0.16; c.vs = 0.9; c.vy = -170; c.bounces = 2; } }
+    }
     for (const g of letters) {
       if (t < g.delay) continue;
       if (!g.landed) {
@@ -940,8 +944,8 @@ const TitleArt = (() => {
       resize();
       resetEntities(reduced);
       startTime = performance.now();
-      stopAt = SETTLE_T + IDLE_LIMIT;
-      if (reduced) { running = false; draw(stopAt, true); return; }
+      stopAt = Infinity; nextKick = SETTLE_T + 1.2;
+      if (reduced) { running = false; draw(SETTLE_T, true); return; }
       startLoop();
     },
 
@@ -953,6 +957,8 @@ const TitleArt = (() => {
       resize();
       resetEntities(true);
       draw(0, true);
+      startTime = performance.now() - (SETTLE_T + 0.5) * 1000; stopAt = Infinity; nextKick = SETTLE_T + 1.0;
+      startLoop();
     },
 
     stop() {
@@ -981,8 +987,6 @@ const TitleArt = (() => {
         }
       }
       if (reduced) return;
-      const t = (performance.now() - startTime) / 1000;
-      stopAt = t + IDLE_LIMIT;
       startLoop();
     },
   };
