@@ -253,7 +253,7 @@
   .kbd { margin: 0; font-size: .72rem; color: var(--sub); text-align: center; }
   @media (hover: none), (pointer: coarse) { .kbd { display: none; } }
   @media (prefers-reduced-motion: reduce) {
-    .tile, .hole { transition: none; }
+    .tile, .hole, .dim { transition: none; }
     .tile.hot .face::before { animation: none; opacity: .3; }
     .skin-jelly .tile .gem { animation: none !important; }
     .tile.dropping, .hole.dropping, .guide.row.dropping { animation: none; }
@@ -354,7 +354,14 @@
   .hs-strong .guide, .hs-clear .guide { background: rgba(255,255,255,.08); }
   .hs-strong .guide.row, .hs-clear .guide.row { border-block: 1px solid rgba(255,255,255,.55); }
   .hs-strong .guide.col, .hs-clear .guide.col { border-inline: 1px solid rgba(255,255,255,.55); }
-  .hs-clear .tile:not(.inx) { opacity: .55; }
+  /* くっきり：行と列の外がわを、4まいの暗い板でおおう（石49こに半透明をかけるより、ずっと軽い） */
+  .dim { display: none; position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; background: var(--board, #0b0e1a); opacity: .5;
+    transition: transform var(--slide, .1s) ease-out; }
+  .hs-clear .dim { display: block; }
+  .dim.a { transform-origin: 0 0;       transform: scale(calc(var(--hc, 4) / 8),       calc(var(--hr, 4) / 8)); }
+  .dim.b { transform-origin: 100% 0;    transform: scale(calc((7 - var(--hc, 4)) / 8), calc(var(--hr, 4) / 8)); }
+  .dim.c { transform-origin: 0 100%;    transform: scale(calc(var(--hc, 4) / 8),       calc((7 - var(--hr, 4)) / 8)); }
+  .dim.d { transform-origin: 100% 100%; transform: scale(calc((7 - var(--hc, 4)) / 8), calc((7 - var(--hr, 4)) / 8)); }
   .tile { transition-property: transform, opacity; }
   /* 石が消えて、空きマスの位置が落ちて変わるとき：前の位置から新しい位置へ、光の筋 */
   .holetrail { position: absolute; z-index: 6; width: 4px; margin-left: -2px; border-radius: 2px; pointer-events: none; opacity: 0;
@@ -441,7 +448,7 @@
     <p class="dragtip" id="dragtip">盤面の上を親指でなぞると<br>なぞった分だけ空きマスが動くよ</p>
     <div class="board" id="board" aria-label="8×8の盤面">
       <div class="nextstrip" id="nextstrip" aria-label="次に落ちてくるパネル"></div>
-      <div class="layer" id="tiles"><div class="guide row"></div><div class="guide col"></div><div class="hole" id="hole"></div><div class="fx" id="fx"></div><div class="tuthint" id="tuthint" hidden>▶</div><div class="edge l"></div><div class="edge r"></div><div class="edge t"></div><div class="edge b"></div></div>
+      <div class="layer" id="tiles"><div class="dim a"></div><div class="dim b"></div><div class="dim c"></div><div class="dim d"></div><div class="guide row"></div><div class="guide col"></div><div class="hole" id="hole"></div><div class="fx" id="fx"></div><div class="tuthint" id="tuthint" hidden>▶</div><div class="edge l"></div><div class="edge r"></div><div class="edge t"></div><div class="edge b"></div></div>
     </div>
 
     <div class="overlay" id="ovReady">
