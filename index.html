@@ -450,6 +450,8 @@
   .bestline b { color: #ffe38a; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
   #ovBest .bestlist { border-top: 0; padding-top: 0; }
   #ovBest .bl-t { font-size: 1.25rem; text-align: center; color: var(--accent); font-weight: 800; letter-spacing: .1em; margin-bottom: 10px; }
+  .diag b { color: var(--fg); }
+  .diag ul { margin: 4px 0 0; padding-left: 1.2em; }
   .tbtns { display: flex; gap: 6px; }
   .tbtns .go { flex: 1; padding: 10px 4px; font-size: .8rem; border-radius: 12px; }
 
@@ -586,6 +588,7 @@
             <div class="seg" data-key="startPos"><button type="button" data-v="center">真ん中</button><button type="button" data-v="corner">右下</button></div></div>
         </div>
         <div class="advbody"></div>
+        <div class="note diag" id="diagNote" hidden></div>
         <button class="go sub" id="bAdvBack" type="button">もどる</button>
       </div>
     </div>
@@ -3212,6 +3215,28 @@ function frame(now) {
   update(dt); render();
   requestAnimationFrame(frame);
 }
+/* ===== 前回の終わりかたの記録（アプリが急に止まる原因をさがすため。この端末の中にだけ、少し残す） ===== */
+const DIAG_KEY = 'ren4-diag', DIAG_LOG = 'ren4-diaglog', diagStart = Date.now();
+function diagWrite(ev) {
+  try { localStorage.setItem(DIAG_KEY, JSON.stringify({ s: diagStart, t: Date.now(), ev: ev, play: state === 'play' && !paused && !tut, mode: settings.mode, colors: settings.colors, score: score, playTime: Math.round(playTime) })); } catch (e) {}
+}
+function diagReadPrev() {       // 起動したとき：ひとつ前の起動の、さいごの記録を、履歴にうつす
+  let d = null; try { d = JSON.parse(localStorage.getItem(DIAG_KEY) || 'null'); } catch (e) {}
+  if (!d || !d.s) return;
+  let log = []; try { log = JSON.parse(localStorage.getItem(DIAG_LOG) || '[]'); } catch (e) {}
+  log.unshift({ at: d.t, kind: d.ev === 'hidden' ? 'bg' : (d.play ? 'play' : 'idle'), mode: d.mode, colors: d.colors, score: d.score, mins: Math.max(0, Math.round((d.t - d.s) / 60000)) });
+  try { localStorage.setItem(DIAG_LOG, JSON.stringify(log.slice(0, 4))); } catch (e) {}
+}
+function renderDiag() {
+  const el = $('diagNote'); let log = []; try { log = JSON.parse(localStorage.getItem(DIAG_LOG) || '[]'); } catch (e) {}
+  el.hidden = !log.length; if (!log.length) return;
+  const KIND = { play: '<b>遊んでいる途中</b>で止まったようです', idle: 'タイトルかポーズ中に止まったようです', bg: '画面を離れたあとに閉じました（自分で閉じた／iPhoneが閉じた）' };
+  el.innerHTML = '最近の終わりかた（アプリが急に止まる原因をさがすための記録です）<ul>' + log.map(r => '<li>' + new Date(r.at).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) + '　' + (KIND[r.kind] || '') + '　' + (r.mode === 'time' ? '時間制限' : 'エンドレス') + '・' + DIFF_NAME[r.colors] + '・' + (r.score || 0).toLocaleString('ja-JP') + '点・起動して' + r.mins + '分</li>').join('') + '</ul>';
+}
+diagReadPrev(); diagWrite('start'); renderDiag();
+setInterval(() => { if (!document.hidden) diagWrite('beat'); }, 5000);
+document.addEventListener('visibilitychange', () => diagWrite(document.hidden ? 'hidden' : 'shown'));
+window.addEventListener('pagehide', () => diagWrite('hidden'));
 syncSound();
 newBoard(); refreshOptions(); refreshResume(); refreshHowBtn();
 titleArtSync(!$('ovReady').hidden);   // はじめにタイトル画面が出ているとき
