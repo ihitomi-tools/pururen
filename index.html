@@ -445,6 +445,27 @@
   #ovBest .bl-t { font-size: 1.25rem; text-align: center; color: var(--accent); font-weight: 800; letter-spacing: .1em; margin-bottom: 10px; }
   .tbtns { display: flex; gap: 6px; }
   .tbtns .go { flex: 1; padding: 10px 4px; font-size: .8rem; border-radius: 12px; }
+
+  /* ===== ゲーム中の夜空（止めた絵）と、背の高い画面の空きスペース ===== */
+  html { background: #0b0d24; }
+  html body { background: transparent; }
+  #skyBg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+  .cheer { position: absolute; left: 0; right: 0; bottom: 0; height: var(--fb, 0px); pointer-events: none; z-index: 2; }
+  .cheer[hidden] { display: none; }
+  .cheer::after { content: ""; position: absolute; left: 6%; right: 6%; bottom: 6px; height: 3px; border-radius: 2px; background: linear-gradient(90deg, transparent, rgba(190,200,255,.45), transparent); }
+  .cc { position: absolute; transform-origin: 50% 100%; will-change: transform; }
+  .cc canvas { display: block; width: 100%; height: 100%; transform: rotate(var(--r, 0deg)); filter: drop-shadow(0 5px 5px rgba(0,0,0,.5)); }
+  .cheer.hot .cc canvas { filter: drop-shadow(0 0 9px rgba(255,210,90,.85)) drop-shadow(0 5px 5px rgba(0,0,0,.5)); }
+  .dragtip:not(.gone) ~ .cheer { opacity: 0; }
+  @media (hover: hover) and (pointer: fine) { .dragtip:not(.gone) ~ .cheer { opacity: 1; } }
+  .hitburst { position: absolute; left: 0; right: 0; top: 0; height: var(--ft, 0px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; pointer-events: none; z-index: 2; opacity: 0; transition: opacity .5s; font-weight: 800; line-height: 1; }
+  .hitburst[data-on="0"] { display: none; }
+  .hitburst.show { opacity: 1; }
+  .hbrow { display: flex; align-items: baseline; gap: .1em; }
+  .hbrow b { font-size: 1em; background: linear-gradient(180deg, #fff7c2, #ffd45a 50%, #ff9f43); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 3px 0 #7a3d00); }
+  .hbrow span { font-size: .42em; color: #ffe38a; text-shadow: 0 2px 0 #7a3d00; }
+  .hitburst small { font-size: .2em; color: #cfd8ff; font-weight: 700; }
+  body.tut .cheer, body.tut .hitburst { display: none; }
 </style>
 <style>
   /* ホーム画面から開いたとき、iPhoneの上の時刻バー・下のホームバーに重ならないようにする */
@@ -452,6 +473,7 @@
 </style>
 </head>
 <body>
+<canvas id="skyBg" aria-hidden="true" style="visibility:hidden"></canvas>
 <div class="app">
   <header class="top">
     <div class="ttl"><h1>ぷるれん</h1><span class="tag">極小キロバイト宣言！オマージュ</span></div>
@@ -482,6 +504,8 @@
   <div class="boardwrap">
     <div class="toast" id="toast" hidden></div>
     <p class="dragtip" id="dragtip">盤面の上を親指でなぞると<br>なぞった分だけ空きマスが動くよ</p>
+    <div class="cheer" id="cheer" aria-hidden="true" hidden></div>
+    <div class="hitburst" id="hitBurst" aria-hidden="true" data-on="0"><div class="hbrow"><b id="hbNum">0</b><span>HIT!</span></div><small id="hbSub"></small></div>
     <div class="board" id="board" aria-label="8×8の盤面">
       <div class="nextstrip" id="nextstrip" aria-label="次に落ちてくるパネル"></div>
       <div class="layer" id="tiles"><div class="guide row"></div><div class="guide col"></div><div class="hole" id="hole"></div><div class="fx" id="fx"></div><div class="tuthint" id="tuthint" hidden>▶</div><div class="edge l"></div><div class="edge r"></div><div class="edge t"></div><div class="edge b"></div></div>
@@ -1183,7 +1207,7 @@ function resolve() {
       addTime(REC_JOIN * recFac() * hitMul(g.hit) * comp.length);   // つながった仲間の分、まとめて
       changed = true;
       sfx.make();
-      pulseHit();
+      pulseHit(g.color);
     }
   }
   return changed;
@@ -1218,6 +1242,7 @@ function vanish(g) {
   const mult = Math.min(5, 1 + 0.1 * (g.hit - 1));
   const pts = Math.round((100 * n + 50) * mult);
   score += pts; cleared += n;
+  cheerHop(g.color, true);
   addTime(REC_PANEL * recFac() * hitMul(g.hit) * n);
   const gone = g.members;
   let sy = 0, sx = 0;
@@ -1311,9 +1336,59 @@ function popup(cx, cy, hit, pts) {
   fx.appendChild(el);
   setTimeout(() => el.remove(), 1050);
 }
+/* ===== 背の高い画面の空きスペース：おうえんねこ（盤面の下）と、大きなHIT（盤面の上） ===== */
+const cheerEl = $('cheer'), hbEl = $('hitBurst'), hbNum = $('hbNum'), hbSub = $('hbSub'), bwrap = document.querySelector('.boardwrap');
+let cheerCats = [], cheerKey = '', hbOn = false;
+function layoutExtras() {
+  const bd = board.getBoundingClientRect(), bw = bwrap.getBoundingClientRect();
+  if (!bw.height) return;
+  const fb = Math.max(0, bw.bottom - bd.bottom - 4), ft = Math.max(0, bd.top - bw.top - 4);
+  bwrap.style.setProperty('--fb', fb.toFixed(0) + 'px'); bwrap.style.setProperty('--ft', ft.toFixed(0) + 'px');
+  const showCheer = fb >= 84, showHit = ft >= 84;
+  cheerEl.hidden = !showCheer;
+  hbEl.dataset.on = showHit ? '1' : '0';
+  hbEl.style.fontSize = Math.min(64, Math.round(ft * 0.5)) + 'px';
+  if (showCheer) buildCheer(fb);
+}
+function buildCheer(fb) {
+  const n = settings.colors, S = Math.round(Math.max(40, Math.min(64, fb * 0.56))), dpr = Math.min(window.devicePixelRatio || 1, 2), W = bwrap.clientWidth;
+  const key = [n, S, Math.round(W), dpr].join('_');
+  if (key === cheerKey) return;
+  cheerKey = key; cheerEl.textContent = ''; cheerCats = [];
+  const step = Math.min(S * 1.14, (W - S - 24) / Math.max(1, n - 1)), left = (W - (step * (n - 1) + S)) / 2;
+  const dy = [10, 16, 8, 14, 10, 16], rot = [-4, 3, -2, 4, -3, 2];
+  const order = [2, 1, 0, 3, 4, 5].filter(k => k < n);   // タイトルと同じ並び：緑・青・赤・黄・紫…
+  order.forEach((k, i) => {
+    const d = document.createElement('div'); d.className = 'cc';
+    d.style.cssText = 'width:' + S + 'px;height:' + S + 'px;left:' + (left + step * i).toFixed(1) + 'px;bottom:' + dy[i] + 'px;--r:' + rot[i] + 'deg';
+    d.appendChild(drawCat(k, Math.round(S * dpr), false)); d._t = 0;
+    cheerEl.appendChild(d); cheerCats[k] = d;
+  });
+}
+// つないだ色のねこが、ぴょんと跳ねる。消えたときは、大きく跳ねる
+function cheerHop(color, big) {
+  if (reduceMotion || cheerEl.hidden) return;
+  const el = cheerCats[color]; if (!el) return;
+  const now = performance.now(); if (now - el._t < (big ? 220 : 120)) return; el._t = now;
+  const h = big ? 36 : 15;
+  el.animate(big
+    ? [{ transform: 'translateY(0) scale(1.2,.8)', filter: 'brightness(1)' }, { transform: 'translateY(-' + h + 'px) scale(.9,1.12)', filter: 'brightness(1.45)', offset: .4 }, { transform: 'translateY(0) scale(1.15,.85)', filter: 'brightness(1)', offset: .75 }, { transform: 'none' }]
+    : [{ transform: 'translateY(0) scale(1.15,.85)' }, { transform: 'translateY(-' + h + 'px) scale(.93,1.08)', offset: .4 }, { transform: 'translateY(0) scale(1.1,.9)', offset: .75 }, { transform: 'none' }],
+    { duration: big ? 620 : 420, easing: 'ease-out' });
+}
+function hitBurst(h) {
+  cheerEl.classList.toggle('hot', h >= 5);
+  if (hbEl.dataset.on !== '1' || h < 3) return;
+  hbNum.textContent = h; hbSub.textContent = '最大 ' + maxHit; hbOn = true; hbEl.classList.add('show');
+  if (!reduceMotion) hbEl.animate([{ transform: 'scale(.6)', opacity: .2 }, { transform: 'scale(1.18)', opacity: 1, offset: .45 }, { transform: 'scale(1)', opacity: 1 }], { duration: 300, easing: 'ease-out' });
+}
+function hbHide() { hbOn = false; hbEl.classList.remove('show'); cheerEl.classList.remove('hot'); }
+if (window.ResizeObserver) new ResizeObserver(layoutExtras).observe(bwrap);
+window.addEventListener('resize', layoutExtras);
 let hitPulseTimer = 0;
-function pulseHit() {
+function pulseHit(color) {
   const b = $('hitBox'); b.classList.remove('pulse'); void b.offsetWidth; b.classList.add('pulse');
+  cheerHop(color, false); hitBurst(chain.hit);
 }
 
 /* ================= 操作 ================= */
@@ -1404,6 +1479,7 @@ function drawSky() {
   const pw = Math.round(w * dpr), ph = Math.round(h * dpr);
   if (cv.width === pw && cv.height === ph && cv._drawn) return;
   cv.width = pw; cv.height = ph; cv._drawn = true;
+  const bgc = $('skyBg'); if (bgc) { bgc.width = pw; bgc.height = ph; }
   const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
   let seed = 20261127;
   const rnd = () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -1436,8 +1512,9 @@ function drawSky() {
   const shoot = (x, y, len, ang, a) => { g.save(); g.translate(x, y); g.rotate(ang); const lg = g.createLinearGradient(-len, 0, 0, 0); lg.addColorStop(0, 'rgba(255,255,255,0)'); lg.addColorStop(1, 'rgba(255,255,255,' + a + ')'); g.fillStyle = lg; g.beginPath(); g.moveTo(-len, 0); g.lineTo(0, -1.3); g.lineTo(0, 1.3); g.closePath(); g.fill(); blob(0, 0, 6, '#ffffff', 0.7); g.restore(); };
   shoot(w * 0.32, h * 0.065, 70, 0.5, 0.95);
   shoot(w * 0.97, h * 0.40, 46, 0.5, 0.7);
+  if (bgc) bgc.getContext('2d').drawImage(cv, 0, 0);   // ゲーム中の背景にも、同じ夜空
 }
-window.addEventListener('resize', () => { if (!$('ovReady').hidden) drawSky(); });
+window.addEventListener('resize', () => drawSky());
 let titleArtReady = false, titleArtWant = false;
 function titleArtSync(on, quiet) {     // タイトル画面が出たら演出をはじめ、ほかの画面では止める
   titleArtWant = on;
@@ -1456,6 +1533,7 @@ let prevOverlay = null;
 function showOverlay(w) {
   titleArtSync(w === 'ready', w === 'ready' && ['how', 'adv', 'best'].includes(prevOverlay));   // あそびかた等から戻ったときは、降らせ直さない
   prevOverlay = w;
+  $('skyBg').style.visibility = ['ready', 'how', 'adv', 'best'].includes(w) ? 'hidden' : 'visible';   // タイトル中は、うしろの夜空を隠す（二重に描かない）
   $('ovAdv').hidden = w !== 'adv';
   $('ovBest').hidden = w !== 'best';
   $('ovReady').hidden = w !== 'ready';
@@ -1685,6 +1763,7 @@ function update(dt) {
   for (const g of groups.filter(x => x.t >= gmOf(x))) { if (groups.includes(g)) vanish(g); }
   if (groups.length === 0) { chain.idle += dt; if (chain.idle > CHAIN_GRACE && chain.hit > 0) chain.hit = 0; }
   else chain.idle = 0;
+  if (hbOn && chain.hit === 0) hbHide();
   if (settings.mode === 'time' && !tut) {
     time -= drainRate() * dt / 1000;
     if (time <= 0) { time = 0; gameOver(false); }
@@ -2989,6 +3068,7 @@ function refreshOptions() {
   applyNext();
   best = parseInt(lsGet(bestKey(), '0'), 10) || 0;
   renderBestList();
+  layoutExtras();                                    // 色の数が変わったら、おうえんねこも作りなおす
 }
 document.querySelectorAll('.seg').forEach(sg => sg.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
