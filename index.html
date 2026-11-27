@@ -419,8 +419,9 @@
       radial-gradient(circle at 5% 46%, rgba(255,243,207,.35) 0 1.5px, transparent 2px),
       radial-gradient(circle at 95% 52%, rgba(255,243,207,.4) 0 2px, transparent 2.5px),
       radial-gradient(ellipse at 50% 22%, #3a2f78 0%, #1b1a45 55%, #0b0d24 100%); }
-  #ovReady .sheet.title { background: none; border: 0; box-shadow: none; padding: 0; max-width: 390px; gap: 10px; }
-  #titleArt { display: block; flex: none; width: 100%; margin: 0 auto -4px; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  #ovReady .sheet.title { background: none; border: 0; box-shadow: none; padding: 0; max-width: 390px; gap: 10px; margin: 0 auto; position: relative; }   /* 上から並べる（中身が増減しても、ロゴの位置は動かない） */
+  .titlesound { position: absolute; right: 0; top: 0; z-index: 2; }
+  #titleArt { display: block; flex: none; width: 100%; aspect-ratio: 390 / 380; height: auto; margin: 0 auto -4px; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   #ovReady #bStart { font-size: 1.5rem; padding: 14px; border-radius: 999px; letter-spacing: .08em; }
   .autosave { margin: -2px 0 2px; font-size: .74rem; line-height: 1.5; color: #cfd8ff; }
   .autosave b { display: inline-block; margin-right: 2px; padding: 1px 9px; border-radius: 999px; background: rgba(255, 213, 74, .16); border: 1px solid rgba(255, 213, 74, .55); color: #ffe38a; font-weight: 800; }
@@ -469,6 +470,7 @@
 
     <div class="overlay" id="ovReady">
       <div class="sheet title">
+        <button class="chip titlesound" id="bSoundT" type="button" aria-pressed="true">おと ON</button>
         <canvas id="titleArt" role="img" aria-label="ぷるれん　ねこをつなげて、ぷるんと連鎖"></canvas>
         <div class="resumebox" id="resumeBox" hidden>
           <button class="go" id="bLoad" type="button">つづきから</button>
@@ -591,11 +593,11 @@ const TitleArt = (() => {
     { kind: 4, size: 46, x: 248, y: 78,  rot: -0.06 },
     { kind: 5, size: 46, x: 300, y: 84,  rot:  0.08 },
     { kind: 0, size: 46, x: 352, y: 78,  rot:  0.05 },
-    { kind: 2, size: 74, x: 74,  y: 318, rot: -0.10 },
-    { kind: 4, size: 76, x: 316, y: 304, rot:  0.10 },
-    { kind: 3, size: 78, x: 246, y: 334, rot:  0.07 },
-    { kind: 0, size: 106, x: 174, y: 346, rot: 0.06 },
-    { kind: 1, size: 100, x: 136, y: 364, rot: -0.08 },
+    { kind: 2, size: 72, x: 50,  y: 322, rot: -0.09 },
+    { kind: 1, size: 78, x: 123, y: 346, rot:  0.07 },
+    { kind: 3, size: 86, x: 195, y: 364, rot: -0.04 },
+    { kind: 0, size: 78, x: 267, y: 346, rot: -0.07 },
+    { kind: 4, size: 72, x: 340, y: 322, rot:  0.09 },
   ];
 
   let cv, ctx, getCatFn;
@@ -614,7 +616,6 @@ const TitleArt = (() => {
     const cssW = cv.clientWidth || W;
     scale = cssW / W;
     const cssH = Math.round(H * scale);
-    cv.style.height = cssH + 'px';
     cv.width = Math.round(cssW * dpr);
     cv.height = Math.round(cssH * dpr);
     if (!running) draw(stopAt, true);
@@ -2894,8 +2895,8 @@ document.querySelectorAll('.seg').forEach(sg => sg.addEventListener('click', e =
   refreshOptions();
   if (state === 'ready' && (k === 'colors' || k === 'startPos')) newBoard();
 }));
-function syncSound() { const b = $('bSound'); b.textContent = muted ? 'おと OFF' : 'おと ON'; b.setAttribute('aria-pressed', String(!muted)); }
-$('bSound').addEventListener('click', () => { muted = !muted; lsSet('ren4-muted', muted ? '1' : '0'); syncSound(); ensureAudio(); });
+function syncSound() { for (const b of [$('bSound'), $('bSoundT')]) { b.textContent = muted ? 'おと OFF' : 'おと ON'; b.setAttribute('aria-pressed', String(!muted)); } }
+for (const id of ['bSound', 'bSoundT']) $(id).addEventListener('click', () => { muted = !muted; lsSet('ren4-muted', muted ? '1' : '0'); syncSound(); ensureAudio(); });
 $('bPause').addEventListener('click', () => setPaused(!paused));
 $('bSkin').addEventListener('click', () => { settings.skin = { neko: 'jelly', jelly: 'gem', gem: 'neko' }[settings.skin]; /* ねこ → プルプル → 宝石 → ねこ */ lsSet('ren4-skin', settings.skin); applySkin(); refreshOptions(); });
 $('bStart').addEventListener('click', newGame);
