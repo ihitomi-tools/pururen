@@ -424,6 +424,12 @@
   #skyArt { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }   /* 夜空（1回だけ描く。動かない） */
   #ovHow .sheet, #ovAdv .sheet, #ovBest .sheet { max-width: 390px; }
   .tctl { display: flex; flex-direction: column; gap: 10px; }
+  .go.first { background: linear-gradient(180deg, #8ff0ff 0%, #4dd0e1 55%, #2aa3b8 100%); color: #06303a; border: 0; box-shadow: 0 3px 0 #17707f, 0 0 16px rgba(77,208,225,.55); font-size: 1.05rem; line-height: 1.25; animation: firstpulse 1.4s ease-in-out infinite alternate; }
+  .go.first[hidden] { display: none; }
+  .go.first small { display: block; font-size: .72rem; font-weight: 700; opacity: .8; margin-top: 1px; }
+  @keyframes firstpulse { from { transform: scale(1); } to { transform: scale(1.025); } }
+  @media (prefers-reduced-motion: reduce) { .go.first { animation: none; } }
+  #ovReady.first #titleArt { width: min(100%, calc((100vh - 440px) * 1.026)); width: min(100%, calc((100svh - 440px) * 1.026)); }
   #ovReady .sheet.title { justify-content: space-evenly; background: none; border: 0; box-shadow: none; padding: 0; max-width: 390px; gap: 10px; margin: 0 auto; position: relative; }   /* 上から並べる（中身が増減しても、ロゴの位置は動かない） */
   .titlesound { position: absolute; right: 0; top: 0; z-index: 2; }
   #titleArt { display: block; flex: none; width: min(100%, calc((100vh - 370px) * 1.026)); width: min(100%, calc((100svh - 370px) * 1.026)); min-width: 250px; aspect-ratio: 390 / 380; height: auto; margin: 0 auto -4px; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
@@ -450,6 +456,7 @@
   /* ===== ゲーム中の夜空（止めた絵）と、背の高い画面の空きスペース ===== */
   html { background: #0b0d24; }
   html body { background: transparent; }
+  #shootStar { position: fixed; left: 0; top: 0; width: 96px; height: 2px; z-index: -1; pointer-events: none; opacity: 0; border-radius: 2px; background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.95)); box-shadow: 0 0 8px 2px rgba(255,255,255,.45); will-change: transform, opacity; }
   #skyBg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
   .cheer { position: absolute; left: 0; right: 0; bottom: 0; height: var(--fb, 0px); pointer-events: none; z-index: 2; }
   .cheer[hidden] { display: none; }
@@ -490,6 +497,7 @@
 </head>
 <body>
 <canvas id="skyBg" aria-hidden="true" style="visibility:hidden"></canvas>
+<div id="shootStar" aria-hidden="true"></div>
 <div class="app">
   <header class="top">
     <div class="ttl"><h1>ぷるれん</h1><span class="tag">極小キロバイト宣言！オマージュ</span></div>
@@ -533,6 +541,7 @@
         <button class="chip titlesound" id="bSoundT" type="button" aria-pressed="true">おと ON</button>
         <canvas id="titleArt" role="img" aria-label="ぷるれん　つなげてちぎってぷるんと連鎖"></canvas>
         <div class="tctl">
+        <button class="go first" id="bFirst" type="button" hidden>はじめての人は、ここから！<small>チュートリアル（約1分）</small></button>
         <div class="resumebox" id="resumeBox" hidden>
           <button class="go sub" id="bLoad" type="button">つづきから</button>
           <div class="resumecap" id="resumeNote"></div>
@@ -1437,6 +1446,24 @@ function refreshBonus() {
   cheerCats.forEach((el, k) => { if (el) el.classList.toggle('bonus', k === bc); });
   if (was >= 0 && bc >= 0) cheerHop(bc, true);
 }
+
+/* ===== プレイ中の背景に、ときどき流れ星（9〜23秒おき。遊んでいるときだけ） ===== */
+const shootEl = $('shootStar');
+let shootTimer = 0;
+function scheduleShoot() { clearTimeout(shootTimer); shootTimer = setTimeout(shootStar, 9000 + Math.random() * 14000); }
+function shootStar() {
+  scheduleShoot();
+  if (reduceMotion || document.hidden || state !== 'play' || paused || tut) return;
+  const w = window.innerWidth, h = window.innerHeight, right = Math.random() < 0.5;
+  const x0 = right ? w * (0.05 + Math.random() * 0.45) : w * (0.5 + Math.random() * 0.45), y0 = h * (0.03 + Math.random() * 0.32);
+  const dx = (right ? 1 : -1) * w * (0.35 + Math.random() * 0.2), dy = h * (0.08 + Math.random() * 0.06), ang = Math.atan2(dy, dx);
+  shootEl.animate([
+    { transform: 'translate(' + x0 + 'px,' + y0 + 'px) rotate(' + ang + 'rad)', opacity: 0 },
+    { opacity: 1, offset: 0.15 },
+    { transform: 'translate(' + (x0 + dx) + 'px,' + (y0 + dy) + 'px) rotate(' + ang + 'rad)', opacity: 0 }
+  ], { duration: 900 + Math.random() * 400, easing: 'ease-in' });
+}
+scheduleShoot();
 let hitPulseTimer = 0;
 function pulseHit(color) {
   const b = $('hitBox'); b.classList.remove('pulse'); void b.offsetWidth; b.classList.add('pulse');
@@ -1776,6 +1803,8 @@ function refreshHowBtn() {
   const b = $('bHow'), seen = lsGet('ren4-tutdone', '0') === '1';
   b.classList.toggle('attn', !seen);
   b.textContent = 'あそびかた';
+  const first = !seen && lsGet('ren4-tutskip', '0') !== '1';        // はじめての人（チュートリアルを、まだ終えても、やめてもいない）
+  $('bFirst').hidden = !first; $('ovReady').classList.toggle('first', first);
 }
 // 時間の回復：増えた分を、0.25秒ぶんまとめて「+○秒」と見せる（回復したのが、ちゃんと分かるように）
 let gainSec = 0, gainTimer = 0;
@@ -3151,6 +3180,7 @@ $('bAdvBack').addEventListener('click', () => showOverlay('ready'));
 $('bBestOpen').addEventListener('click', () => { renderBestList(); showOverlay('best'); });
 $('bBestBack').addEventListener('click', () => showOverlay('ready'));
 $('bTut').addEventListener('click', startTutorial);
+$('bFirst').addEventListener('click', startTutorial);
 $('cNext').addEventListener('click', () => {
   if (!tut) return;
   if (tut.end) { endTutorial(); return; }
@@ -3158,7 +3188,7 @@ $('cNext').addEventListener('click', () => {
   else { tut.end = true; tutBuild({ hole: [7, 7], put: {} }); lsSet('ren4-tutdone', '1'); tutRender(); }
 });
 $('cRetry').addEventListener('click', () => { if (!tut) return; if (tut.end) tutLoad(0); else tutLoad(tut.step); });
-$('cSkip').addEventListener('click', () => { if (tut) endTutorial(); });
+$('cSkip').addEventListener('click', () => { if (tut) { lsSet('ren4-tutskip', '1'); endTutorial(); } });   // やめたら、つぎからは大きく案内しない
 $('bLoad').addEventListener('click', () => { const d = readSave(); if (d) resumeGame(d); else refreshResume(); });
 setInterval(() => { if (state === 'play' && !paused) saveGame(); }, 2000);
 window.addEventListener('pagehide', saveGame);
