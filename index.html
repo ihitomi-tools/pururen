@@ -531,7 +531,7 @@
       <canvas id="skyArt" aria-hidden="true"></canvas>
       <div class="sheet title">
         <button class="chip titlesound" id="bSoundT" type="button" aria-pressed="true">おと ON</button>
-        <canvas id="titleArt" role="img" aria-label="ぷるれん　ねこをつなげて、ぷるんと連鎖"></canvas>
+        <canvas id="titleArt" role="img" aria-label="ぷるれん　つなげてちぎってぷるんと連鎖"></canvas>
         <div class="tctl">
         <div class="resumebox" id="resumeBox" hidden>
           <button class="go sub" id="bLoad" type="button">つづきから</button>
@@ -599,7 +599,7 @@
           <li>時間制限モードは、30秒ごとに「ステージ」が上がり、ゲージが少しずつ速く、時間の回復が少しずつ少なくなる。3分をすぎると「ラストスパート」で、時間の減りが30秒ごとに少しずつ速くなる。どこまで行けるかに挑戦しよう</li>
           <li>消去待ちのあいだに別の5枚をつなげて、HITをのばそう</li>
           <li>盤面の上に、次に落ちてくる仲間が列ごとに2つ見えていて、見えたとおりに落ちてくる</li>
-          <li>「ボーナスねこ」：ステージごとに、ボーナスの色が決まっている（緑→青→赤→黄→紫…の順。エンドレスは30秒ごとに交代）。その色を消すと、得点が1.5倍。時間バーの右の「ねこ ×1.5」が、いまのボーナス色だよ</li>
+          <li>ボーナスの色：ステージごとに、ボーナスの色が決まっている（緑→青→赤→黄→紫…の順。エンドレスは30秒ごとに交代）。その色を消すと、得点が1.5倍。時間バーの右の「ねこの絵 ×1.5」が、いまのボーナス色だよ（石のデザインが、ねこ以外でも同じ）</li>
           <li>難しさは色の数で決まる（EASY＝4色 ／ NORMAL＝5色 ／ HARD＝6色）。色が多いほど、つなげにくい</li>
         </ol>
         <button class="go" id="bTut" type="button">チュートリアルをやってみる（約1分）</button>
@@ -662,7 +662,7 @@ const TitleArt = (() => {
   const FPS_MS = 1000 / 30;        // 最大30fps
   const SETTLE_T = 1.45;           // 降ってくる演出が落ち着く目安（秒）
   const LOGO_TEXT = 'ぷるれん';
-  const SUB_TEXT = 'ねこをつなげて、ぷるんと連鎖';
+  const SUB_TEXT = 'つなげてちぎってぷるんと連鎖';
 
   // ねこの配置：上7匹（小）＋下5匹（大）。yは足もと
   const CAT_LAYOUT = [
@@ -1415,7 +1415,8 @@ window.addEventListener('resize', layoutExtras);
 /* ===== ボーナスねこ ===== */
 const BONUS_MUL = 1.5;                                   // ボーナス色を消したときの得点の倍率
 const BONUS_ORDER = [2, 1, 0, 3, 4, 5];                  // ステージ1から順に：緑・青・赤・黄・紫…（タイトルのねこと同じ並び）
-const CAT_NAME = ['赤', '青', '緑', '黄', '紫', 'だいだい'];
+const COLOR_NAME = ['赤', '青', '緑', '黄', '紫', 'だいだい'];
+const bonusName = k => COLOR_NAME[k] + 'の' + SKIN_NAME[settings.skin];   // 例：緑のねこ／緑のプルプル／緑の宝石
 const bonusColor = () => {
   if (tut) return -1;
   const o = BONUS_ORDER.filter(k => k < settings.colors);
@@ -1430,7 +1431,7 @@ function refreshBonus() {
   if (bc >= 0) {
     const dpr = Math.min(window.devicePixelRatio || 1, 2), c = drawCat(bc, Math.round(26 * dpr), false); c.style.cssText = 'display:block;width:26px;height:26px';
     $('bonusIcon').replaceChildren(c);
-    chip.setAttribute('aria-label', 'ボーナスねこ：' + CAT_NAME[bc] + 'ねこ　得点が' + BONUS_MUL + '倍');
+    chip.setAttribute('aria-label', 'ボーナス：' + bonusName(bc) + '　得点が' + BONUS_MUL + '倍');
     if (was >= 0 && !reduceMotion) { chip.classList.remove('flash'); void chip.offsetWidth; chip.classList.add('flash'); }   // 交代したとき
   }
   cheerCats.forEach((el, k) => { if (el) el.classList.toggle('bonus', k === bc); });
@@ -1480,7 +1481,7 @@ function newGame() {
   paused = false; state = 'play'; document.body.classList.remove('paused');
   lastStage = 0; clearSave();
   showOverlay(null);
-  bonusShown = -2; refreshBonus(); showToast('ボーナスは　' + CAT_NAME[bonusColor()] + 'ねこ！　消すと得点 ×' + BONUS_MUL);
+  bonusShown = -2; refreshBonus(); showToast('ボーナスは　' + bonusName(bonusColor()) + '！　消すと得点 ×' + BONUS_MUL);
   showHoleCue();
 }
 // 自己ベストの保存：「モード × 難易度（色の数）」ごと。ゲージの長さなどの設定を変えても、記録は別にならない
@@ -1578,7 +1579,7 @@ function titleArtSync(on, quiet) {     // タイトル画面が出たら演出�
     if (!titleArtReady) { TitleArt.init($('titleArt'), (kind, px) => drawCat(kind, px, false)); titleArtReady = true; $('titleArt').addEventListener('pointerdown', e => { const r = e.currentTarget.getBoundingClientRect(); TitleArt.poke(e.clientX - r.left, e.clientY - r.top); }); }
     TitleArt.play();
   };
-  const fl = document.fonts && document.fonts.load ? Promise.all([document.fonts.load('800 84px "M PLUS Rounded 1c"', 'ぷるれん'), document.fonts.load('800 15px "M PLUS Rounded 1c"', 'ねこをつなげて、ぷるんと連鎖')]) : Promise.resolve();
+  const fl = document.fonts && document.fonts.load ? Promise.all([document.fonts.load('800 84px "M PLUS Rounded 1c"', 'ぷるれん'), document.fonts.load('800 15px "M PLUS Rounded 1c"', 'つなげてちぎってぷるんと連鎖')]) : Promise.resolve();
   Promise.race([fl, new Promise(r => setTimeout(r, 1500))]).then(go, go);
 }
 let prevOverlay = null;
