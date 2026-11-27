@@ -253,7 +253,7 @@
   .kbd { margin: 0; font-size: .72rem; color: var(--sub); text-align: center; }
   @media (hover: none), (pointer: coarse) { .kbd { display: none; } }
   @media (prefers-reduced-motion: reduce) {
-    .tile, .hole, .dim { transition: none; }
+    .tile, .hole { transition: none; }
     .tile.hot .face::before { animation: none; opacity: .3; }
     .skin-jelly .tile .gem { animation: none !important; }
     .tile.dropping, .hole.dropping, .guide.row.dropping { animation: none; }
@@ -354,14 +354,13 @@
   .hs-strong .guide, .hs-clear .guide { background: rgba(255,255,255,.08); }
   .hs-strong .guide.row, .hs-clear .guide.row { border-block: 1px solid rgba(255,255,255,.55); }
   .hs-strong .guide.col, .hs-clear .guide.col { border-inline: 1px solid rgba(255,255,255,.55); }
-  /* くっきり：行と列の外がわを、4まいの暗い板でおおう（石49こに半透明をかけるより、ずっと軽い） */
-  .dim { display: none; position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; background: var(--board, #0b0e1a); opacity: .5;
-    transition: transform var(--slide, .1s) ease-out; }
-  .hs-clear .dim { display: block; }
-  .dim.a { transform-origin: 0 0;       transform: scale(calc(var(--hc, 4) / 8),       calc(var(--hr, 4) / 8)); }
-  .dim.b { transform-origin: 100% 0;    transform: scale(calc((7 - var(--hc, 4)) / 8), calc(var(--hr, 4) / 8)); }
-  .dim.c { transform-origin: 0 100%;    transform: scale(calc(var(--hc, 4) / 8),       calc((7 - var(--hr, 4)) / 8)); }
-  .dim.d { transform-origin: 100% 100%; transform: scale(calc((7 - var(--hc, 4)) / 8), calc((7 - var(--hr, 4)) / 8)); }
+  /* くっきり：暗くはせず、行・列の帯と空きマスの印を、しっかりより太く・明るくする（重い処理は足さない） */
+  .hs-clear .guide { background: rgba(255,255,255,.2); }
+  .hs-clear .guide.row { border-block: 3px solid rgba(255,255,255,.95); }
+  .hs-clear .guide.col { border-inline: 3px solid rgba(255,255,255,.95); }
+  .hs-clear .edge.l, .hs-clear .edge.r { width: 10px; } .hs-clear .edge.l { left: -10px; } .hs-clear .edge.r { right: -10px; }
+  .hs-clear .edge.t, .hs-clear .edge.b { height: 10px; } .hs-clear .edge.t { top: -10px; } .hs-clear .edge.b { bottom: -10px; }
+  .hs-clear .hole::before { border-width: 4px; background: radial-gradient(circle, rgba(255,255,255,.9), rgba(255,255,255,.4)); box-shadow: 0 0 0 3px rgba(0,0,0,.65), 0 0 28px 10px rgba(255,255,255,.85); }
   .tile { transition-property: transform, opacity; }
   /* 石が消えて、空きマスの位置が落ちて変わるとき：前の位置から新しい位置へ、光の筋 */
   .holetrail { position: absolute; z-index: 6; width: 4px; margin-left: -2px; border-radius: 2px; pointer-events: none; opacity: 0;
@@ -448,7 +447,7 @@
     <p class="dragtip" id="dragtip">盤面の上を親指でなぞると<br>なぞった分だけ空きマスが動くよ</p>
     <div class="board" id="board" aria-label="8×8の盤面">
       <div class="nextstrip" id="nextstrip" aria-label="次に落ちてくるパネル"></div>
-      <div class="layer" id="tiles"><div class="dim a"></div><div class="dim b"></div><div class="dim c"></div><div class="dim d"></div><div class="guide row"></div><div class="guide col"></div><div class="hole" id="hole"></div><div class="fx" id="fx"></div><div class="tuthint" id="tuthint" hidden>▶</div><div class="edge l"></div><div class="edge r"></div><div class="edge t"></div><div class="edge b"></div></div>
+      <div class="layer" id="tiles"><div class="guide row"></div><div class="guide col"></div><div class="hole" id="hole"></div><div class="fx" id="fx"></div><div class="tuthint" id="tuthint" hidden>▶</div><div class="edge l"></div><div class="edge r"></div><div class="edge t"></div><div class="edge b"></div></div>
     </div>
 
     <div class="overlay" id="ovReady">
@@ -477,7 +476,7 @@
               <div class="seg" data-key="guide"><button type="button" data-v="on">あり</button><button type="button" data-v="off">なし</button></div></div>
             <div class="opt"><span class="lab">空きマスの見せ方</span>
               <div class="seg" data-key="holeStyle"><button type="button" data-v="normal">ふつう</button><button type="button" data-v="strong">しっかり</button><button type="button" data-v="clear">くっきり</button></div>
-              <span class="diffnote">しっかり＝白く光る印とふちの目盛り ／ くっきり＝さらに、行と列以外を暗くする</span></div>
+              <span class="diffnote">しっかり＝白く光る印とふちの目盛り ／ くっきり＝さらに、行と列の帯と、空きマスの印を太く・明るくする</span></div>
             <div class="opt"><span class="lab">スタート位置（ゲームをはじめる場所）</span>
               <div class="seg" data-key="startPos"><button type="button" data-v="center">真ん中</button><button type="button" data-v="corner">右下</button></div></div>
           </div>
@@ -523,7 +522,7 @@
               <div class="seg" data-key="guide"><button type="button" data-v="on">あり</button><button type="button" data-v="off">なし</button></div></div>
             <div class="opt"><span class="lab">空きマスの見せ方</span>
               <div class="seg" data-key="holeStyle"><button type="button" data-v="normal">ふつう</button><button type="button" data-v="strong">しっかり</button><button type="button" data-v="clear">くっきり</button></div>
-              <span class="diffnote">しっかり＝白く光る印とふちの目盛り ／ くっきり＝さらに、行と列以外を暗くする</span></div>
+              <span class="diffnote">しっかり＝白く光る印とふちの目盛り ／ くっきり＝さらに、行と列の帯と、空きマスの印を太く・明るくする</span></div>
           </div>
           <div class="advbody"></div>
         </details>
