@@ -459,7 +459,7 @@
         <details class="adv"><summary>くわしい設定</summary>
           <div class="advopts">
             <div class="opt"><span class="lab">石のデザイン</span>
-              <div class="seg" data-key="skin"><button type="button" data-v="gem">宝石</button><button type="button" data-v="jelly">プルプル</button><button type="button" data-v="neko">ねこ</button></div></div>
+              <div class="seg" data-key="skin"><button type="button" data-v="neko">ねこ</button><button type="button" data-v="jelly">プルプル</button><button type="button" data-v="gem">宝石</button></div></div>
             <div class="opt"><span class="lab">ゲージの速さ</span>
               <div class="seg" data-key="gaugeLevel"><button type="button" data-v="3">はやい</button><button type="button" data-v="5">ふつう</button><button type="button" data-v="9">ゆっくり</button></div></div>
             <div class="opt"><span class="lab">なぞる感覚</span>
@@ -507,7 +507,7 @@
         <details class="adv"><summary>くわしい設定</summary>
           <div class="advopts">
             <div class="opt"><span class="lab">石のデザイン</span>
-              <div class="seg" data-key="skin"><button type="button" data-v="gem">宝石</button><button type="button" data-v="jelly">プルプル</button><button type="button" data-v="neko">ねこ</button></div></div>
+              <div class="seg" data-key="skin"><button type="button" data-v="neko">ねこ</button><button type="button" data-v="jelly">プルプル</button><button type="button" data-v="gem">宝石</button></div></div>
             <div class="opt"><span class="lab">なぞる感覚</span>
               <div class="seg" data-key="feel"><button type="button" data-v="steady">ていねい</button><button type="button" data-v="mid">ちゅうかん</button><button type="button" data-v="quick">ぐいぐい</button></div></div>
             <div class="opt"><span class="lab">なぞる速さ（盤面の上をなぞったとき）</span>
@@ -578,7 +578,7 @@ const settings = {
   guide: lsGet('ren4-guide', 'on') === 'off' ? 'off' : 'on',
   holeStyle: ['normal', 'strong', 'clear'].includes(lsGet('ren4-holeStyle', 'strong')) ? lsGet('ren4-holeStyle', 'strong') : 'strong',   // 空きマスの見せ方
   startPos: lsGet('ren4-startPos', 'center') === 'corner' ? 'corner' : 'center',                                                  // スタート位置
-  skin: ['gem', 'jelly', 'neko'].includes(lsGet('ren4-skin', 'jelly')) ? lsGet('ren4-skin', 'jelly') : 'jelly',   // はじめは「プルプル」   // はじめは「プルプル」
+  skin: ['gem', 'jelly', 'neko'].includes(lsGet('ren4-skin', 'neko')) ? lsGet('ren4-skin', 'neko') : 'neko',   // はじめは「ねこ」（保存してあれば、最後に選んだもの）
   feel: ['steady', 'mid', 'quick'].includes(lsGet('ren4-feel', 'steady')) ? lsGet('ren4-feel', 'steady') : 'steady',
   dragLevel: lvInit('dragLevel', { slow: 2, normal: 5, fast: 8 }[lsGet('ren4-drag', 'normal')] || 5),
 };
@@ -2536,7 +2536,7 @@ document.querySelectorAll('.seg').forEach(sg => sg.addEventListener('click', e =
 function syncSound() { const b = $('bSound'); b.textContent = muted ? 'おと OFF' : 'おと ON'; b.setAttribute('aria-pressed', String(!muted)); }
 $('bSound').addEventListener('click', () => { muted = !muted; lsSet('ren4-muted', muted ? '1' : '0'); syncSound(); ensureAudio(); });
 $('bPause').addEventListener('click', () => setPaused(!paused));
-$('bSkin').addEventListener('click', () => { settings.skin = { gem: 'jelly', jelly: 'neko', neko: 'gem' }[settings.skin]; lsSet('ren4-skin', settings.skin); applySkin(); refreshOptions(); });
+$('bSkin').addEventListener('click', () => { settings.skin = { neko: 'jelly', jelly: 'gem', gem: 'neko' }[settings.skin]; /* ねこ → プルプル → 宝石 → ねこ */ lsSet('ren4-skin', settings.skin); applySkin(); refreshOptions(); });
 $('bStart').addEventListener('click', newGame);
 $('bAgain').addEventListener('click', newGame);
 $('bResume').addEventListener('click', () => setPaused(false));
