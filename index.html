@@ -609,7 +609,7 @@
           <li>消去待ちのあいだに別の5枚をつなげて、HITをのばそう</li>
           <li>盤面の上に、次に落ちてくる仲間が列ごとに2つ見えていて、見えたとおりに落ちてくる</li>
           <li>ボーナスの色：ステージごとに、ボーナスの色が決まっている（緑→青→赤→黄→紫…の順。エンドレスは30秒ごとに交代）。その色を消すと、得点が1.5倍。時間バーの右の「ねこの絵 ×1.5」が、いまのボーナス色だよ（石のデザインが、ねこ以外でも同じ）</li>
-          <li>難しさは色の数で決まる（EASY＝4色 ／ NORMAL＝5色 ／ HARD＝6色）。色が多いほど、つなげにくい</li>
+          <li>難しさは色の数で決まる（EASY＝4色 ／ NORMAL＝5色 ／ HARD＝6色）。色が多いほど、つなげにくいので、HARDはゲージを少し長くしてある</li>
         </ol>
         <button class="go" id="bTut" type="button">チュートリアルをやってみる（約1分）</button>
         <button class="go sub" id="bHowBack" type="button">もどる</button>
@@ -1074,7 +1074,9 @@ const STAGE_MS = 30000, START_SEC = 60, SPURT = 6;                              
 const stage = () => (settings.mode === 'time' && !tut) ? Math.floor(playTime / STAGE_MS) : 0;
 const paceK = () => settings.paceLevel / 5;                           // 強さ（5 = 標準）
 const baseGaugeMs = () => 1500 + 500 * settings.gaugeLevel;           // ゲージの長さ: 2.0秒〜6.5秒（5 = 4.0秒）
-const gaugeMs = () => (tut && tut.slow) ? 20000 : baseGaugeMs() * Math.max(0.5, 1 - 0.05 * paceK() * stage());   // ステージごとに5%短く（最短で半分）
+const HARD_GAUGE_K = 1.35;                                           // HARD（6色）は、つなげにくい分、ゲージを長くする
+const diffGaugeK = () => (settings.colors === 6 && !tut) ? HARD_GAUGE_K : 1;
+const gaugeMs = () => (tut && tut.slow) ? 20000 : baseGaugeMs() * diffGaugeK() * Math.max(0.5, 1 - 0.05 * paceK() * stage());   // ステージごとに5%短く（最短で半分）
 const gmOf = g => g.gm || gaugeMs();                                  // ゲージの長さは、そのゲージが始まったときに決める（途中で急に消えないように）
 const baseDrain = () => (0.8 + 0.16 * settings.drainLevel) / 1.6 * (100 / START_SEC);   // 1秒に減る残り時間(%)。5 = ちょうど60秒で0
 const drainRate = () => baseDrain() * (1 + 0.2 * paceK() * Math.max(0, stage() - SPURT + 1));   // ラストスパート(7ステージ目〜)で、1ステージごとに+20%ずつ（直線で、急に跳ね上がらない）
@@ -3085,7 +3087,7 @@ document.addEventListener('selectionchange', () => { try { const sel = window.ge
 /* ================= 画面の部品 ================= */
 // ===== くわしい設定（1〜10）。普段は、設定画面の下のほうに、たたんである =====
 const ADV = [
-  { key: 'gaugeLevel', label: 'ゲージの長さ（消えるまで）', lo: '短い', hi: '長い', note: () => (baseGaugeMs() / 1000).toFixed(1) + '秒' },
+  { key: 'gaugeLevel', label: 'ゲージの長さ（消えるまで）', lo: '短い', hi: '長い', note: () => (baseGaugeMs() / 1000).toFixed(1) + '秒' + (settings.colors === 6 ? '（HARDは×' + HARD_GAUGE_K + '）' : '') },
   { key: 'dragLevel', label: 'なぞる感度（動かすのに必要な指の距離）', lo: 'にぶい', hi: 'びんかん', note: () => Math.round(cellPx() * 0.48 * dragFactor()) + 'px' },
   { key: 'stepLevel', label: '1歩の速さ（ていねい・ちゅうかん）', lo: 'ゆっくり', hi: '速い', note: () => stepCool() + 'ms' },
   { key: 'wobbleLevel', label: 'プルプルの強さ（プルプル・ねこ版）', lo: '控えめ', hi: 'ぷるぷる', note: () => '×' + (settings.wobbleLevel / 5).toFixed(1) },
