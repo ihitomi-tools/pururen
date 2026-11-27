@@ -410,7 +410,7 @@
   @media (prefers-reduced-motion: reduce) { .chip, .seg button, .go { transition: none; } .chip:active, .go:active { transform: none; } }
 
   /* ===== タイトル画面：画面いっぱいの夜空に、ぷるぷるロゴとねこ ===== */
-  #ovReady { position: fixed; inset: 0; z-index: 30; border: 0; border-radius: 0; box-shadow: none;
+  #ovReady, #ovHow, #ovAdv, #ovBest { position: fixed; inset: 0; z-index: 30; border: 0; border-radius: 0; box-shadow: none;
     padding: max(10px, env(safe-area-inset-top)) 14px max(18px, env(safe-area-inset-bottom));
     background:
       radial-gradient(circle at 8% 6%, rgba(255,243,207,.55) 0 1.5px, transparent 2px),
@@ -419,13 +419,29 @@
       radial-gradient(circle at 5% 46%, rgba(255,243,207,.35) 0 1.5px, transparent 2px),
       radial-gradient(circle at 95% 52%, rgba(255,243,207,.4) 0 2px, transparent 2.5px),
       radial-gradient(ellipse at 50% 22%, #3a2f78 0%, #1b1a45 55%, #0b0d24 100%); }
+  #ovHow .sheet, #ovAdv .sheet, #ovBest .sheet { max-width: 390px; }
   #ovReady .sheet.title { background: none; border: 0; box-shadow: none; padding: 0; max-width: 390px; gap: 10px; margin: 0 auto; position: relative; }   /* 上から並べる（中身が増減しても、ロゴの位置は動かない） */
   .titlesound { position: absolute; right: 0; top: 0; z-index: 2; }
-  #titleArt { display: block; flex: none; width: 100%; aspect-ratio: 390 / 380; height: auto; margin: 0 auto -4px; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  #titleArt { display: block; flex: none; width: min(100%, calc((100vh - 370px) * 1.026)); width: min(100%, calc((100svh - 370px) * 1.026)); min-width: 250px; aspect-ratio: 390 / 380; height: auto; margin: 0 auto -4px; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   #ovReady #bStart { font-size: 1.5rem; padding: 14px; border-radius: 999px; letter-spacing: .08em; }
-  .autosave { margin: -2px 0 2px; font-size: .74rem; line-height: 1.5; color: #cfd8ff; }
-  .autosave b { display: inline-block; margin-right: 2px; padding: 1px 9px; border-radius: 999px; background: rgba(255, 213, 74, .16); border: 1px solid rgba(255, 213, 74, .55); color: #ffe38a; font-weight: 800; }
-  #ovReady .note, #ovReady .bestlist, #ovReady .adv { border-top-color: rgba(168, 181, 214, .22); }
+  .autosave { margin: 0; font-size: .72rem; line-height: 1.5; color: #9aa8cc; }
+  .resumebox { gap: 3px; padding-bottom: 0; }
+  .resumebox .go { border-color: #ffd54a; padding: 10px; font-size: 1.05rem; }
+  .resumecap { font-size: .72rem; color: #cfd8ff; }
+  .resumecap b { color: #ffe38a; margin-right: 4px; }
+  .savewarn { font-size: .66rem; color: #9aa8cc; margin-top: -4px; }
+  .tpanel { background: rgba(255,255,255,.07); border: 1px solid rgba(168,181,214,.28); border-radius: 14px; padding: 9px 10px; display: flex; flex-direction: column; gap: 7px; }
+  .tpanel .opt { flex-direction: row; align-items: center; gap: 8px; }
+  .tpanel .opt .lab { width: 50px; flex: none; text-align: left; }
+  .tpanel .seg { flex: 1; }
+  .tpanel .seg button { padding: 6px 2px; font-size: .82rem; }
+  .tpanel .seg small { display: block; font-size: .6rem; opacity: .75; font-weight: 700; }
+  .bestline { font-size: .72rem; color: #cfd8ff; text-align: center; }
+  .bestline b { color: #ffe38a; font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+  #ovBest .bestlist { border-top: 0; padding-top: 0; }
+  #ovBest .bl-t { font-size: 1.25rem; text-align: center; color: var(--accent); font-weight: 800; letter-spacing: .1em; margin-bottom: 10px; }
+  .tbtns { display: flex; gap: 6px; }
+  .tbtns .go { flex: 1; padding: 10px 4px; font-size: .8rem; border-radius: 12px; }
 </style>
 <style>
   /* ホーム画面から開いたとき、iPhoneの上の時刻バー・下のホームバーに重ならないようにする */
@@ -473,40 +489,56 @@
         <button class="chip titlesound" id="bSoundT" type="button" aria-pressed="true">おと ON</button>
         <canvas id="titleArt" role="img" aria-label="ぷるれん　ねこをつなげて、ぷるんと連鎖"></canvas>
         <div class="resumebox" id="resumeBox" hidden>
-          <button class="go" id="bLoad" type="button">つづきから</button>
-          <div class="note" id="resumeNote"></div>
+          <button class="go sub" id="bLoad" type="button">つづきから</button>
+          <div class="resumecap" id="resumeNote"></div>
         </div>
         <button class="go" id="bStart" type="button">スタート</button>
-        <p class="autosave"><b>オートセーブつき</b> やめても「つづきから」で再開OK</p>
-        <div class="opt"><span class="lab">モード</span>
-          <div class="seg" data-key="mode"><button type="button" data-v="time">時間制限</button><button type="button" data-v="endless">エンドレス</button></div></div>
-        <div class="opt"><span class="lab">難易度</span>
-          <div class="seg" data-key="colors"><button type="button" data-v="4">EASY</button><button type="button" data-v="5">NORMAL</button><button type="button" data-v="6">HARD</button></div>
-          <span class="diffnote">EASY＝4色 ／ NORMAL＝5色 ／ HARD＝6色（色が多いほど、つなげにくい）</span></div>
-        <details class="adv"><summary>くわしい設定</summary>
-          <div class="advopts">
-            <div class="opt"><span class="lab">石のデザイン</span>
-              <div class="seg" data-key="skin"><button type="button" data-v="neko">ねこ</button><button type="button" data-v="jelly">プルプル</button><button type="button" data-v="gem">宝石</button></div></div>
-            <div class="opt"><span class="lab">ゲージの速さ</span>
-              <div class="seg" data-key="gaugeLevel"><button type="button" data-v="3">はやい</button><button type="button" data-v="5">ふつう</button><button type="button" data-v="9">ゆっくり</button></div></div>
-            <div class="opt"><span class="lab">なぞる感覚</span>
-              <div class="seg" data-key="feel"><button type="button" data-v="steady">ていねい</button><button type="button" data-v="mid">ちゅうかん</button><button type="button" data-v="quick">ぐいぐい</button></div></div>
-            <div class="opt"><span class="lab">なぞる速さ（盤面の上をなぞったとき）</span>
-              <div class="seg" data-key="dragLevel"><button type="button" data-v="2">ゆっくり</button><button type="button" data-v="5">ふつう</button><button type="button" data-v="8">はやい</button></div></div>
-            <div class="opt"><span class="lab">空きマスのガイド（行と列のうすい帯）</span>
-              <div class="seg" data-key="guide"><button type="button" data-v="on">あり</button><button type="button" data-v="off">なし</button></div></div>
-            <div class="opt"><span class="lab">空きマスの見せ方</span>
-              <div class="seg" data-key="holeStyle"><button type="button" data-v="normal">ふつう</button><button type="button" data-v="strong">しっかり</button><button type="button" data-v="clear">くっきり</button></div>
-              <span class="diffnote">しっかり＝白く光る印とふちの目盛り ／ くっきり＝さらに、行と列の帯と、空きマスの印を太く・明るくする</span></div>
-            <div class="opt"><span class="lab">スタート位置（ゲームをはじめる場所）</span>
-              <div class="seg" data-key="startPos"><button type="button" data-v="center">真ん中</button><button type="button" data-v="corner">右下</button></div></div>
-          </div>
-          <div class="advbody"></div>
-        </details>
-        <button class="go sub" id="bHow" type="button">あそびかた・チュートリアル</button>
+        <div class="savewarn" id="saveNote" hidden>新しく始めると、保存したゲームは消えます</div>
+        <div class="tpanel">
+          <div class="opt"><span class="lab">モード</span>
+            <div class="seg" data-key="mode"><button type="button" data-v="time">時間制限</button><button type="button" data-v="endless">エンドレス</button></div></div>
+          <div class="opt"><span class="lab">難しさ</span>
+            <div class="seg" data-key="colors"><button type="button" data-v="4">EASY<small>4色</small></button><button type="button" data-v="5">NORMAL<small>5色</small></button><button type="button" data-v="6">HARD<small>6色</small></button></div></div>
+          <div class="bestline" id="bestLine"></div>
+        </div>
+        <div class="tbtns">
+          <button class="go sub" id="bHow" type="button">あそびかた</button>
+          <button class="go sub" id="bAdvOpen" type="button">くわしい設定</button>
+          <button class="go sub" id="bBestOpen" type="button">自己ベスト一覧</button>
+        </div>
+        <p class="autosave">とちゅうでやめても、自動で保存されるよ</p>
+      </div>
+    </div>
+
+    <div class="overlay" id="ovAdv" hidden>
+      <div class="sheet">
+        <h2>くわしい設定</h2>
+        <div class="advopts">
+          <div class="opt"><span class="lab">石のデザイン</span>
+            <div class="seg" data-key="skin"><button type="button" data-v="neko">ねこ</button><button type="button" data-v="jelly">プルプル</button><button type="button" data-v="gem">宝石</button></div></div>
+          <div class="opt"><span class="lab">ゲージの速さ</span>
+            <div class="seg" data-key="gaugeLevel"><button type="button" data-v="3">はやい</button><button type="button" data-v="5">ふつう</button><button type="button" data-v="9">ゆっくり</button></div></div>
+          <div class="opt"><span class="lab">なぞる感覚</span>
+            <div class="seg" data-key="feel"><button type="button" data-v="steady">ていねい</button><button type="button" data-v="mid">ちゅうかん</button><button type="button" data-v="quick">ぐいぐい</button></div></div>
+          <div class="opt"><span class="lab">なぞる速さ（盤面の上をなぞったとき）</span>
+            <div class="seg" data-key="dragLevel"><button type="button" data-v="2">ゆっくり</button><button type="button" data-v="5">ふつう</button><button type="button" data-v="8">はやい</button></div></div>
+          <div class="opt"><span class="lab">空きマスのガイド（行と列のうすい帯）</span>
+            <div class="seg" data-key="guide"><button type="button" data-v="on">あり</button><button type="button" data-v="off">なし</button></div></div>
+          <div class="opt"><span class="lab">空きマスの見せ方</span>
+            <div class="seg" data-key="holeStyle"><button type="button" data-v="normal">ふつう</button><button type="button" data-v="strong">しっかり</button><button type="button" data-v="clear">くっきり</button></div>
+            <span class="diffnote">しっかり＝白く光る印とふちの目盛り ／ くっきり＝さらに、行と列の帯と、空きマスの印を太く・明るくする</span></div>
+          <div class="opt"><span class="lab">スタート位置（ゲームをはじめる場所）</span>
+            <div class="seg" data-key="startPos"><button type="button" data-v="center">真ん中</button><button type="button" data-v="corner">右下</button></div></div>
+        </div>
+        <div class="advbody"></div>
+        <button class="go sub" id="bAdvBack" type="button">もどる</button>
+      </div>
+    </div>
+
+    <div class="overlay" id="ovBest" hidden>
+      <div class="sheet">
         <div class="bestlist" id="bestNote" aria-label="自己ベスト"></div>
-        <div class="note" id="saveNote" hidden>「スタート」で新しく始めると、保存したゲームは消えます。</div>
-        <div class="note">昔遊んで大好きだった「極小キロバイト宣言！」の『連続連動連結連鎖』を、もう一度遊びたい一心で作りました（私にとっては神ゲーです）。原作そのものではなく、記憶と公開されている説明をもとに作った、非公式のオマージュ作品です。原作・配信元とは関係ありません。盤面の広さ・ゲージの長さ・点数などの数値は推定です。</div>
+        <button class="go sub" id="bBestBack" type="button">もどる</button>
       </div>
     </div>
 
@@ -521,9 +553,11 @@
           <li>時間制限モードは、30秒ごとに「ステージ」が上がり、ゲージが少しずつ速く、時間の回復が少しずつ少なくなる。3分をすぎると「ラストスパート」で、時間の減りが30秒ごとに少しずつ速くなる。どこまで行けるかに挑戦しよう</li>
           <li>消去待ちのあいだに別の5枚をつなげて、HITをのばそう</li>
           <li>盤面の上に、次に落ちてくる仲間が列ごとに2つ見えていて、見えたとおりに落ちてくる</li>
+          <li>難しさは色の数で決まる（EASY＝4色 ／ NORMAL＝5色 ／ HARD＝6色）。色が多いほど、つなげにくい</li>
         </ol>
         <button class="go" id="bTut" type="button">チュートリアルをやってみる（約1分）</button>
         <button class="go sub" id="bHowBack" type="button">もどる</button>
+        <div class="note">昔遊んで大好きだった「極小キロバイト宣言！」の『連続連動連結連鎖』を、もう一度遊びたい一心で作りました（私にとっては神ゲーです）。原作そのものではなく、記憶と公開されている説明をもとに作った、非公式のオマージュ作品です。原作・配信元とは関係ありません。盤面の広さ・ゲージの長さ・点数などの数値は推定です。</div>
       </div>
     </div>
 
@@ -864,6 +898,16 @@ const TitleArt = (() => {
       startLoop();
     },
 
+    show() {
+      if (!cv) return;
+      stoppedByUser = false;
+      running = false;
+      if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+      resize();
+      resetEntities(true);
+      draw(0, true);
+    },
+
     stop() {
       stoppedByUser = true;
       running = false;
@@ -937,6 +981,7 @@ let panels = new Map(), els = new Map(), groups = [];
 let nextId = 1, nextGroupId = 1;
 let state = 'ready', paused = false;
 let score = 0, dispScore = 0, time = 100, playTime = 0, cleared = 0, maxLink = 0, maxHit = 0, best = 0;
+let runBeat = false;   // このプレイで、自己ベストをこえたか（途中で保存しても、おわりの画面で「更新！」と出すため）
 let chain = { hit: 0, idle: 0 };
 let overTimer = 0;
 let lastStage = 0;                   // いまのステージ（上がったかどうかを見分ける）
@@ -1301,7 +1346,7 @@ function newGame() {
   newBoard();
   score = 0; dispScore = 0; time = 100; playTime = 0; cleared = 0; maxLink = 0; maxHit = 0;
   chain = { hit: 0, idle: 0 };
-  best = parseInt(lsGet(bestKey(), '0'), 10) || 0;
+  best = parseInt(lsGet(bestKey(), '0'), 10) || 0; runBeat = false;
   paused = false; state = 'play'; document.body.classList.remove('paused');
   lastStage = 0; clearSave();
   showOverlay(null);
@@ -1334,8 +1379,9 @@ function gameOver(byQuit) {
   if (byQuit) showResult(byQuit);
 }
 function showResult(byQuit) {
-  const isBest = score > best && score > 0;
-  if (isBest) { best = score; lsSet(bestKey(), String(best)); }
+  const beat = score > best && score > 0;
+  if (beat) { best = score; lsSet(bestKey(), String(best)); }
+  const isBest = runBeat || beat;
   $('overTitle').textContent = byQuit ? 'おつかれさま' : (settings.mode === 'time' ? 'タイムアップ' : 'ゲーム終了');
   $('rScore').textContent = score.toLocaleString('ja-JP');
   $('rHit').textContent = String(maxHit);
@@ -1347,9 +1393,10 @@ function showResult(byQuit) {
   showOverlay('over');
 }
 let titleArtReady = false, titleArtWant = false;
-function titleArtSync(on) {     // タイトル画面が出たら演出をはじめ、ほかの画面では止める
+function titleArtSync(on, quiet) {     // タイトル画面が出たら演出をはじめ、ほかの画面では止める
   titleArtWant = on;
   if (!on) { TitleArt.stop(); return; }
+  if (quiet && titleArtReady) { TitleArt.show(); return; }
   const go = () => {
     if (!titleArtWant) return;
     if (!titleArtReady) { TitleArt.init($('titleArt'), (kind, px) => drawCat(kind, px, false)); titleArtReady = true; $('titleArt').addEventListener('pointerdown', e => { const r = e.currentTarget.getBoundingClientRect(); TitleArt.poke(e.clientX - r.left, e.clientY - r.top); }); }
@@ -1358,8 +1405,12 @@ function titleArtSync(on) {     // タイトル画面が出たら演出をはじ
   const fl = document.fonts && document.fonts.load ? Promise.all([document.fonts.load('800 84px "M PLUS Rounded 1c"', 'ぷるれん'), document.fonts.load('800 15px "M PLUS Rounded 1c"', 'ねこをつなげて、ぷるんと連鎖')]) : Promise.resolve();
   Promise.race([fl, new Promise(r => setTimeout(r, 1500))]).then(go, go);
 }
+let prevOverlay = null;
 function showOverlay(w) {
-  titleArtSync(w === 'ready');
+  titleArtSync(w === 'ready', w === 'ready' && ['how', 'adv', 'best'].includes(prevOverlay));   // あそびかた等から戻ったときは、降らせ直さない
+  prevOverlay = w;
+  $('ovAdv').hidden = w !== 'adv';
+  $('ovBest').hidden = w !== 'best';
   $('ovReady').hidden = w !== 'ready';
   $('ovPause').hidden = w !== 'pause';
   $('ovOver').hidden = w !== 'over';
@@ -1377,8 +1428,14 @@ function toTitle() {
 /* ================= 途中保存（「つづきから」） ================= */
 // 遊んでいる途中の状態を、このブラウザの中（localStorage）に保存します。ポーズしたとき・アプリを閉じるとき・遊んでいる間は2秒おきに保存。
 const SAVE_KEY = 'ren4-save', DIFF_NAME = { 4: 'EASY', 5: 'NORMAL', 6: 'HARD' };
+// 自己ベストをこえたら、その場で記録する（「タイトルにもどる」やアプリが落ちたときも、記録がなくならない）
+function noteBest() {
+  if (tut || !(score > best) || score <= 0) return;
+  best = score; runBeat = true; lsSet(bestKey(), String(best));
+}
 function saveGame() {
   if (state !== 'play' || tut) return;
+  noteBest();
   try {
     lsSet(SAVE_KEY, JSON.stringify({
       v: 1, at: Date.now(), mode: settings.mode, colors: settings.colors,
@@ -1419,7 +1476,7 @@ function readSave() {
 function resumeGame(d) {
   ensureAudio();
   moveCool = 0; pendingMove = null; midQ.length = 0;
-  settings.mode = d.mode; settings.colors = d.colors; lsSet('ren4-mode', d.mode); lsSet('ren4-colors', String(d.colors));
+  settings.mode = d.mode; settings.colors = d.colors; lsSet('ren4-mode', d.mode); lsSet('ren4-colors', String(d.colors)); runBeat = false;
   grid = Array.from({ length: N }, () => Array(N).fill(null)); panels = new Map(); groups = []; clearDom();
   for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (d.grid[r][c] >= 0) makePanel(d.grid[r][c], r, c);
   hole = { r: d.hole.r, c: d.hole.c };
@@ -1440,7 +1497,7 @@ function resumeGame(d) {
 function refreshResume() {
   const d = state === 'ready' ? readSave() : null;
   $('resumeBox').hidden = !d; $('saveNote').hidden = !d;
-  if (d) $('resumeNote').textContent = '保存したゲーム：' + DIFF_NAME[d.colors] + '・' + (d.mode === 'time' ? '時間制限' : 'エンドレス') + '・スコア ' + d.score.toLocaleString('ja-JP');
+  if (d) $('resumeNote').innerHTML = '<b>オートセーブ</b>' + DIFF_NAME[d.colors] + '・' + (d.mode === 'time' ? '時間制限' : 'エンドレス') + '　' + d.score.toLocaleString('ja-JP') + '点';
 }
 
 /* ================= チュートリアル ================= */
@@ -1540,7 +1597,7 @@ function endTutorial() {
 function refreshHowBtn() {
   const b = $('bHow'), seen = lsGet('ren4-tutdone', '0') === '1';
   b.classList.toggle('attn', !seen);
-  b.textContent = seen ? 'あそびかた・チュートリアル' : 'はじめての人は、あそびかた';
+  b.textContent = 'あそびかた';
 }
 // 時間の回復：増えた分を、0.25秒ぶんまとめて「+○秒」と見せる（回復したのが、ちゃんと分かるように）
 let gainSec = 0, gainTimer = 0;
@@ -2863,6 +2920,8 @@ function renderBestList() {
     }
   }
   el.innerHTML = '<div class="bl-t">自己ベスト</div><div class="bl-g">' + h + '</div>';
+  const cur = parseInt(lsGet(bestKey(), '0'), 10) || 0;
+  const bl = $('bestLine'); if (bl) bl.innerHTML = DIFF_NAME[settings.colors] + '・' + (settings.mode === 'time' ? '時間制限' : 'エンドレス') + 'の自己ベスト　<b>' + (cur ? cur.toLocaleString('ja-JP') : '—') + '</b>';
 }
 function applyHoleStyle() {
   const app = document.querySelector('.app');
@@ -2906,6 +2965,10 @@ $('bEnd').addEventListener('click', () => { showOverlay(null); gameOver(true); }
 $('bQuit').addEventListener('click', () => { saveGame(); toTitle(); });
 $('bHow').addEventListener('click', () => showOverlay('how'));
 $('bHowBack').addEventListener('click', () => showOverlay('ready'));
+$('bAdvOpen').addEventListener('click', () => showOverlay('adv'));
+$('bAdvBack').addEventListener('click', () => showOverlay('ready'));
+$('bBestOpen').addEventListener('click', () => { renderBestList(); showOverlay('best'); });
+$('bBestBack').addEventListener('click', () => showOverlay('ready'));
 $('bTut').addEventListener('click', startTutorial);
 $('cNext').addEventListener('click', () => {
   if (!tut) return;
