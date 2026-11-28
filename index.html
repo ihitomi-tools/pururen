@@ -559,9 +559,9 @@
   .wcat[data-p="crouch"] .wtail { opacity: 1; }
   .wcat[data-p="sit"] .wbody { animation: wsway 2.6s ease-in-out infinite alternate; }
   .wcat[data-p="crouch"] .wbody { animation: wjit var(--jd, .16s) linear infinite; }
-  @keyframes wtail { from { rotate: 4deg; } to { rotate: 34deg; } }
+  @keyframes wtail { from { rotate: -14deg; } to { rotate: 46deg; } }
   @keyframes wsway { from { rotate: -1.6deg; } to { rotate: 1.6deg; } }
-  @keyframes wjit { 0%, 100% { translate: 0 0; rotate: 0deg; } 25% { translate: calc(var(--ja, 1) * -1px) 0; rotate: -1.4deg; } 75% { translate: calc(var(--ja, 1) * 1px) 0; rotate: 1.4deg; } }
+  @keyframes wjit { 0%, 100% { translate: 0 0; rotate: 0deg; } 25% { translate: calc(var(--ja, 1) * -1px) 0; rotate: -0.5deg; } 75% { translate: calc(var(--ja, 1) * 1px) 0; rotate: 0.5deg; } }
   .paused .wbody, .paused .wtail { animation-play-state: paused; }
   #pawLayer { position: fixed; inset: 0; z-index: 40; pointer-events: none; overflow: hidden; }
   .pawg { position: absolute; transform-origin: 50% 0; will-change: transform; }
@@ -1816,7 +1816,7 @@ function renderWCat(on) {
   }
   const u = Math.max(0, Math.min(1, (f - 0.5) / 0.3)), v = Math.max(0, Math.min(1, (f - 0.8) / 0.2));   // しっぽの速さ／うずうずの強さ
   const vars = Math.round(u * 8) + '_' + Math.round(v * 8);
-  if (vars !== wcatVars) { wcatVars = vars; wcat.style.setProperty('--tw', (1.5 - 0.95 * u).toFixed(2) + 's'); wcat.style.setProperty('--jd', (0.17 - 0.07 * v).toFixed(3) + 's'); wcat.style.setProperty('--ja', (1 + 2.2 * v).toFixed(2)); }
+  if (vars !== wcatVars) { wcatVars = vars; wcat.style.setProperty('--tw', (0.7 - 0.3 * v).toFixed(2) + 's'); wcat.style.setProperty('--jd', (0.22 - 0.06 * v).toFixed(3) + 's'); wcat.style.setProperty('--ja', (0.4 + 0.8 * v).toFixed(2)); }
 }
 /* ===== 猫の手：飛び出して、上から降りてきて「ぽんっ」。ちょいちょいして、帰っていく ===== */
 const pawLayer = document.createElement('div'); pawLayer.id = 'pawLayer'; document.body.appendChild(pawLayer);
