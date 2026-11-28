@@ -494,9 +494,13 @@
 
   /* ===== ラッキーねこ（光るパネル）とフィーバー ===== */
   .tile.lucky { z-index: 4; }
-  .tile.lucky .face { box-shadow: 0 0 0 3px #ffb300, 0 0 0 5px rgba(70,35,0,.6), 0 0 18px 6px rgba(255,205,50,.95); animation: luckyring .8s ease-in-out infinite alternate; }
-  .tile.lucky.grp .face { box-shadow: 0 0 0 2px #fff, 0 0 0 5px #ffb300, 0 0 0 7px rgba(70,35,0,.6), 0 0 18px 6px rgba(255,205,50,.95); animation: luckyring .8s ease-in-out infinite alternate; }
+  .tile.lucky .face { box-shadow: 0 0 0 3px rgba(70,35,0,.6), 0 0 18px 6px rgba(255,205,50,.9); animation: luckyring .8s ease-in-out infinite alternate; }
+  .tile.lucky.grp .face { box-shadow: 0 0 0 2px #fff, 0 0 0 5px rgba(70,35,0,.6), 0 0 18px 6px rgba(255,205,50,.9); animation: luckyring .8s ease-in-out infinite alternate; }
   @keyframes luckyring { from { filter: brightness(1); } to { filter: brightness(1.28) saturate(1.2); } }
+  /* 金のふち：のこりの時間ぶんだけ。12時の位置から、時計回りに、消えていく */
+  .lring { position: absolute; inset: 0; z-index: 5; border-radius: 26%; padding: 3.5px; pointer-events: none; background: conic-gradient(from 0deg, transparent calc(var(--lp, 0) * 1%), #ffb300 0), rgba(255,179,0,.22); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+  .lring.low { animation: lringlow .35s ease-in-out infinite alternate; }
+  @keyframes lringlow { from { opacity: 1; } to { opacity: .3; } }
   .tile.lucky::after { content: "★"; position: absolute; right: -7px; top: -11px; z-index: 6; font-size: 27px; line-height: 1; color: #ffe27a; -webkit-text-stroke: 1px #b36b00; text-shadow: 0 0 8px #ffb300, 0 0 3px #fff; pointer-events: none; animation: luckytwinkle 1.1s ease-in-out infinite alternate; }
   @keyframes luckytwinkle { from { transform: scale(.75) rotate(-14deg); opacity: .8; } to { transform: scale(1.2) rotate(14deg); opacity: 1; } }
   .feverrow { margin-top: -4px; }
@@ -510,7 +514,7 @@
   body.tut .feverrow { display: none; }
   .mini.lk { position: relative; }
   .mini.lk::after { content: "★"; position: absolute; right: -3px; top: -7px; font-size: 14px; line-height: 1; color: #ffe27a; -webkit-text-stroke: .5px #b36b00; text-shadow: 0 0 5px #ffb300; animation: luckytwinkle 1.1s ease-in-out infinite alternate; }
-  @media (prefers-reduced-motion: reduce) { .tile.lucky::after, .tile.lucky .face, .mini.lk::after { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .tile.lucky::after, .tile.lucky .face, .mini.lk::after, .lring.low { animation: none; } }
 
   /* ===== 必殺技（HARD）：集めたねこが50匹で、1色ぜんぶ消し ===== */
   .skillrow { position: relative; display: block; width: 100%; height: 22px; margin-top: -4px; padding: 0; border: 0; border-radius: 999px; background: rgba(0,0,0,.38); overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,.5); color: #fff; cursor: default; }
@@ -660,7 +664,7 @@
           <li>消去待ちのあいだに別の5枚をつなげて、HITをのばそう</li>
           <li>盤面の上に、次に落ちてくる仲間が列ごとに2つ見えていて、見えたとおりに落ちてくる</li>
           <li>ボーナスの色：ステージごとに、ボーナスの色が決まっている（緑→青→赤→黄→紫…の順。エンドレスは30秒ごとに交代）。その色を消すと、得点が1.5倍。時間バーの右の「ねこの絵 ×1.5」が、いまのボーナス色だよ（石のデザインが、ねこ以外でも同じ）</li>
-          <li>ラッキーねこ（どの難しさでも）：ときどき、星がきらきら光るパネルが1枚出る。それを含む塊を消すと、得点が2倍になって、時間制限モードでは時間も3秒増える</li>
+          <li>ラッキーねこ（どの難しさでも）：ときどき、次に降ってくる予告のねこに★がつく。降りてくると、金のふちが光るパネルになって、ふちが時計回りに減っていく（なくなると、ふつうのパネルにもどる）。それを含む塊を消すと、得点が2倍、時間制限モードでは時間も3秒増える。HITをつなげるほど出やすくなって、同時に何個か出ることもある</li>
           <li>フィーバー（NORMAL・HARD）：HITをつなげると、時間バーの下の「フィーバーゲージ」がたまる。満タンで15秒間フィーバー！　得点が2倍になって、ゲージも長くなるので、足しやすい。フィーバー中にHITをつなげると、時間が少しずつのびる</li>
           <li>必殺技（HARD）：消したねこが50匹たまると、1色のねこが、ぜんぶ消える！（得点 ×2）　初めは自動で出て、いちばん多い色を消す。「くわしい設定」で、手動で出したり、ボーナス色や好きな色（えらぶ）を消すこともできる</li>
           <li>難しさは色の数で決まる（EASY＝4色 ／ NORMAL＝5色 ／ HARD＝6色）。色が多いほど、つなげにくいので、HARDはゲージを少し長くしてある。そのぶん、得点は難しいほど高くなる（EASY ×1 ／ NORMAL ×2 ／ HARD ×4）</li>
@@ -1229,20 +1233,23 @@ let nextQ = [];
 const nextStrip = $('nextstrip'), ncols = [];
 for (let c = 0; c < N; c++) { const d = document.createElement('div'); d.className = 'ncol'; nextStrip.appendChild(d); ncols.push(d); }
 const randColor = () => Math.floor(Math.random() * settings.colors);
-let luckyNext = null, takenLucky = false;      // 予告の列にいる「ラッキーになる予定のねこ」（列と位置）／いま降ってきたねこが、そうだったか
+let luckyNexts = [], takenLucky = false;      // 予告の列にいる「ラッキーになる予定のねこ」たち（列と位置）／いま降ってきたねこが、そうだったか
 function takeNext(c) {
   const col = nextQ[c].shift(); nextQ[c].push(randColor()); takenLucky = false;
-  if (luckyNext && luckyNext.c === c) { if (luckyNext.pos === 0) { takenLucky = true; luckyNext = null; } else luckyNext.pos = 0; }
+  for (let i = luckyNexts.length - 1; i >= 0; i--) {
+    const e = luckyNexts[i]; if (e.c !== c) continue;
+    if (e.pos === 0) { takenLucky = true; luckyNexts.splice(i, 1); } else e.pos = 0;
+  }
   return col;
 }
 function initNext() { nextQ = Array.from({ length: N }, () => [randColor(), randColor()]); ncols.forEach(d => { d._k = ''; }); renderNext(); }
 function renderNext() {
   for (let c = 0; c < N; c++) {
-    const lkN = luckyNext && luckyNext.c === c ? luckyNext.pos : -1, d = ncols[c], k = nextQ[c][0] + ',' + nextQ[c][1] + ',' + lkN;
+    const l0 = luckyNexts.some(e => e.c === c && e.pos === 0), l1 = luckyNexts.some(e => e.c === c && e.pos === 1), d = ncols[c], k = nextQ[c][0] + ',' + nextQ[c][1] + ',' + l0 + l1;
     if (d._k === k) continue;
     const first = d._k === undefined || d._k === '';
     d._k = k;
-    d.innerHTML = '<i class="mini g' + nextQ[c][1] + (first ? '' : ' mpop') + (lkN === 1 ? ' lk' : '') + '"></i><i class="mini g' + nextQ[c][0] + (first ? '' : ' mpop') + (lkN === 0 ? ' lk' : '') + '"></i>';
+    d.innerHTML = '<i class="mini g' + nextQ[c][1] + (first ? '' : ' mpop') + (l1 ? ' lk' : '') + '"></i><i class="mini g' + nextQ[c][0] + (first ? '' : ' mpop') + (l0 ? ' lk' : '') + '"></i>';
   }
 }
 function newBoard() {
@@ -1346,11 +1353,11 @@ function vanish(g) {
   const n = g.members.size;
   const mult = Math.min(5, 1 + 0.1 * (g.hit - 1));
   const bonus = !tut && g.color === bonusColor();
-  const lucky = !tut && [...g.members].some(m => m.lucky);
+  const luckyN = tut ? 0 : [...g.members].filter(m => m.lucky).length, lucky = luckyN > 0, luckyK = 1 + luckyN * (LUCKY_MUL - 1);   // 光るパネルが1つで×2、2つで×3…
   const feverNow = fever > 0;
-  const pts = Math.round((100 * n + 50) * mult * (bonus ? BONUS_MUL : 1) * (lucky ? LUCKY_MUL : 1) * (feverNow ? FEVER_MUL : 1) * (g.mul || 1) * diffMul());
-  if (lucky) { luckyP = null; luckyWait = 6000 + Math.random() * 6000; if (settings.mode === 'time') addTime(LUCKY_SEC * 100 / START_SEC); sfx.lucky(); }
-  const tags = []; if (bonus) tags.push('ボーナス ×' + BONUS_MUL); if (lucky) tags.push('★ラッキー ×' + LUCKY_MUL); if (feverNow) tags.push('FEVER ×' + FEVER_MUL); if (g.mul) tags.push('ぜんぶ消し ×' + g.mul);
+  const pts = Math.round((100 * n + 50) * mult * (bonus ? BONUS_MUL : 1) * (lucky ? luckyK : 1) * (feverNow ? FEVER_MUL : 1) * (g.mul || 1) * diffMul());
+  if (lucky) { if (settings.mode === 'time') addTime(luckyN * LUCKY_SEC * 100 / START_SEC); sfx.lucky(); }
+  const tags = []; if (bonus) tags.push('ボーナス ×' + BONUS_MUL); if (lucky) tags.push('★ラッキー ×' + luckyK); if (feverNow) tags.push('FEVER ×' + FEVER_MUL); if (g.mul) tags.push('ぜんぶ消し ×' + g.mul);
   score += pts; cleared += n;
   if (!g.mul) skillAdd(n);
   cheerHop(g.color, true);
@@ -1393,7 +1400,7 @@ function vanish(g) {
   // 足りない分は、上から新しいパネルが落ちてくる
   for (let c = 0; c < N; c++) {
     const k = removed[c];
-    for (let i = 0; i < k; i++) { const r = k - 1 - i; const np = makePanel(takeNext(c), r, c); np.fall = k; np.spawn = true; if (takenLucky) { np.lucky = true; luckyP = np; luckyLeft = LUCKY_LIFE; } }   // 見せていた色のとおり、いちばん下から順に
+    for (let i = 0; i < k; i++) { const r = k - 1 - i; const np = makePanel(takeNext(c), r, c); np.fall = k; np.spawn = true; if (takenLucky) { np.lucky = true; np.lkLeft = LUCKY_LIFE; } }   // 見せていた色のとおり、いちばん下から順に
   }
   if ((hole.r !== holeBefore.r || hole.c !== holeBefore.c) && settings.holeStyle !== 'normal' && !reduceMotion) holeTrail(holeBefore, hole);
   renderNext();
@@ -1545,18 +1552,24 @@ function shootStar() {
 }
 scheduleShoot();
 /* ===== ラッキーねこ：ときどき光るパネルが1枚。それを含む塊を消すと、得点 ×2・時間 +3秒 ===== */
-const LUCKY_MUL = 2, LUCKY_SEC = 3, LUCKY_LIFE = 14000;
-let luckyP = null, luckyWait = 5000, luckyLeft = 0;
-function luckyReset() { if (luckyP) luckyP.lucky = false; luckyP = null; luckyNext = null; luckyWait = 4000 + Math.random() * 3000; luckyLeft = 0; }
+const LUCKY_MUL = 2, LUCKY_SEC = 3, LUCKY_LIFE = 14000, LUCKY_MAX = 5, LUCKY_BOOST = 0.12;   // 倍率／時間ボーナス（秒）／光っていられる時間／同時にいられる数／HITがのびるほど出やすくなる強さ
+let luckyWait = 5000;
+const luckyBoost = () => 1 + LUCKY_BOOST * Math.min(chain.hit, 30);                         // HIT 10 で約2.2倍、HIT 30 で約4.6倍、出やすい
+function luckyCount() { let n = luckyNexts.length; for (const q of panels.values()) if (q.lucky) n++; return n; }
+function luckyReset() {
+  for (const q of panels.values()) q.lucky = false;
+  luckyNexts = []; luckyWait = 4000 + Math.random() * 3000;
+  if (typeof nextQ !== 'undefined' && nextQ.length) renderNext();
+}
 function luckyTick(dt) {
-  if (tut || luckyNext) return;                // 予告のねこが降ってくるのを待っているあいだは、なにもしない
-  if (luckyP) {
-    luckyLeft -= dt;
-    if (!panels.has(luckyP.id) || luckyLeft <= 0) { if (panels.has(luckyP.id)) luckyP.lucky = false; luckyP = null; luckyWait = 5000 + Math.random() * 5000; }
-    return;
-  }
-  luckyWait -= dt; if (luckyWait > 0) return;
-  luckyNext = { c: Math.floor(Math.random() * N), pos: 0 }; renderNext();    // 次に降ってくる予告のねこに、★をつける（盤面のねこは、とつぜん変わらない）
+  if (tut) return;
+  for (const q of panels.values()) if (q.lucky) { q.lkLeft -= dt; if (q.lkLeft <= 0) q.lucky = false; }     // 光っていられる時間が、おわったら、ふつうのパネルにもどる
+  if (luckyCount() >= LUCKY_MAX) return;
+  luckyWait -= dt * luckyBoost(); if (luckyWait > 0) return;
+  luckyWait = 6000 + Math.random() * 5000;
+  const free = []; for (let c = 0; c < N; c++) for (const pos of [0, 1]) if (!luckyNexts.some(e => e.c === c && e.pos === pos)) free.push({ c, pos });
+  if (!free.length) return;
+  luckyNexts.push(free[Math.floor(Math.random() * free.length)]); renderNext();         // 降ってくる予告のねこに、★をつける（盤面のねこは、とつぜん変わらない）
 }
 /* ===== フィーバー（NORMAL・HARD）：HITをつなげてゲージが満タンになると、10秒間、得点 ×2・ゲージが長くなる ===== */
 const FEVER_ADD = 5, FEVER_MS = 15000, FEVER_EXT = 400, FEVER_MAX = 30000, FEVER_MUL = 2, FEVER_GAUGE_K = 1.5;   // ためる量（1回のつながり）／続く時間／フィーバー中にHITがつながるごとにのびる時間／のびる上限
@@ -3105,7 +3118,17 @@ function render() {
       const hot = g.t / gmOf(g) > 0.72;
       if (hot !== el._hot) { el.classList.toggle('hot', hot); el._hot = hot; }
     } else if (el._hot) { el.classList.remove('hot'); el._hot = false; }
-    const lk = !!p.lucky; if (lk !== el._lk) { el.classList.toggle('lucky', lk); el._lk = lk; }
+    const lk = !!p.lucky;
+    if (lk !== el._lk) {
+      el.classList.toggle('lucky', lk); el._lk = lk;
+      if (lk) { const rg = document.createElement('i'); rg.className = 'lring'; el.appendChild(rg); el._ring = rg; el._lp = -1; el._low = false; }
+      else if (el._ring) { el._ring.remove(); el._ring = null; }
+    }
+    if (lk && el._ring) {                      // 金のふちが、時計回りに、へっていく
+      const pct = Math.max(0, Math.min(100, (1 - p.lkLeft / LUCKY_LIFE) * 100));
+      if (Math.abs(pct - el._lp) >= 0.4) { el._ring.style.setProperty('--lp', pct.toFixed(1)); el._lp = pct; }
+      const low = p.lkLeft < 3000; if (low !== el._low) { el._ring.classList.toggle('low', low); el._low = low; }   // のこりわずかで、点滅
+    }
   }
   flushBatch();                                // ためておいた作業を、ここで、1回の強制リフローのあとに実行
   if (holeFall) {
