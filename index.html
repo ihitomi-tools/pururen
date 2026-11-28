@@ -555,11 +555,11 @@
   .wcat .wp { left: 0; bottom: 0; opacity: 0; }
   .wcat[data-p="peek"] .wp.peek, .wcat[data-p="sit"] .wp.sit, .wcat[data-p="crouch"] .wp.crouch { opacity: 1; }
   .wcat[data-p="crouch"] .wtail { left: var(--tlc); }
-  .wcat .wtail { bottom: 0; transform-origin: 50% 100%; opacity: 0; animation: wtail var(--tw, 1.5s) ease-in-out infinite alternate; }
+  .wcat .wtail { bottom: var(--tbc, 0px); transform-origin: 50% 100%; opacity: 0; animation: wtail var(--tw, 1.5s) ease-in-out infinite alternate; }
   .wcat[data-p="crouch"] .wtail { opacity: 1; }
   .wcat[data-p="sit"] .wbody { animation: wsway 2.6s ease-in-out infinite alternate; }
   .wcat[data-p="crouch"] .wbody { animation: wjit var(--jd, .16s) linear infinite; }
-  @keyframes wtail { from { rotate: -16deg; } to { rotate: 18deg; } }
+  @keyframes wtail { from { rotate: 4deg; } to { rotate: 34deg; } }
   @keyframes wsway { from { rotate: -1.6deg; } to { rotate: 1.6deg; } }
   @keyframes wjit { 0%, 100% { translate: 0 0; rotate: 0deg; } 25% { translate: calc(var(--ja, 1) * -1px) 0; rotate: -1.4deg; } 75% { translate: calc(var(--ja, 1) * 1px) 0; rotate: 1.4deg; } }
   .paused .wbody, .paused .wtail { animation-play-state: paused; }
@@ -667,9 +667,9 @@
             <span class="diffnote">しっかり＝白く光る印とふちの目盛り ／ くっきり＝さらに、行と列の帯と、空きマスの印を太く・明るくする</span></div>
           <div class="opt"><span class="lab">スタート位置（ゲームをはじめる場所）</span>
             <div class="seg" data-key="startPos"><button type="button" data-v="center">真ん中</button><button type="button" data-v="corner">右下</button></div></div>
-            <div class="opt"><span class="lab">猫の手の出しかた（HARD）</span>
+            <div class="opt"><span class="lab">猫の手の出しかた（NORMAL・HARD）</span>
               <div class="seg" data-key="skillTrigger"><button type="button" data-v="auto">自動</button><button type="button" data-v="manual">手動（タップ）</button></div></div>
-            <div class="opt"><span class="lab">猫の手で消す色（HARD）</span>
+            <div class="opt"><span class="lab">猫の手で消す色（NORMAL・HARD）</span>
               <div class="seg" data-key="skillColor"><button type="button" data-v="most">いちばん多い色</button><button type="button" data-v="bonus">ボーナス色</button><button type="button" data-v="pick">えらぶ</button></div>
               <span class="diffnote">えらぶ＝猫の手が出るとき、ゲームが止まって、下のねこをタップして色を決める</span></div>
         </div>
@@ -701,7 +701,7 @@
           <li>ボーナスの色：ステージごとに、ボーナスの色が決まっている（緑→青→赤→黄→紫…の順。エンドレスは30秒ごとに交代）。その色を消すと、得点が1.5倍。時間バーの右の「ねこの絵 ×1.5」が、いまのボーナス色だよ（石のデザインが、ねこ以外でも同じ）</li>
           <li>ラッキーねこ（どの難しさでも）：ときどき、次に降ってくる予告のねこに★がつく。降りてくると、金のふちが光るパネルになって、ふちが30秒かけて時計回りに減っていく（なくなると、ふつうのパネルにもどる。塊にくっついているあいだは、減らない）。それを含む塊を消すと、得点が2倍、時間制限モードでは時間も3秒増える。HITをつなげるほど出やすくなって、同時に何個か出ることもある</li>
           <li>フィーバー（NORMAL・HARD）：HITをつなげると、時間バーの下の「フィーバーゲージ」がたまる。満タンで15秒間フィーバー！　得点が2倍になって、ゲージも長くなるので、足しやすい。フィーバー中にHITをつなげると、時間が少しずつのびる</li>
-          <li>必殺！猫の手も借りたい！（HARD）：消したねこが50匹たまると、1色のねこが、ぜんぶ消える！（得点 ×2）　初めは自動で出て、いちばん多い色を消す。「くわしい設定」で、手動で出したり、ボーナス色や好きな色（えらぶ）を消すこともできる。色えらびで「あとで」を押すと、必殺技はためたまま再開して、ピンクの行をタップすると、また出せる</li>
+          <li>必殺！猫の手も借りたい！（NORMAL・HARD）：消したねこが50匹たまると、1色のねこが、ぜんぶ消える！（得点 ×2）　初めは自動で出て、いちばん多い色を消す。「くわしい設定」で、手動で出したり、ボーナス色や好きな色（えらぶ）を消すこともできる。色えらびで「あとで」を押すと、必殺技はためたまま再開して、ピンクの行をタップすると、また出せる</li>
           <li>難しさは色の数で決まる（EASY＝4色 ／ NORMAL＝5色 ／ HARD＝6色）。色が多いほど、つなげにくいので、HARDはゲージを少し長くしてある。そのぶん、得点は難しいほど高くなる（EASY ×1 ／ NORMAL ×2 ／ HARD ×3）</li>
         </ol>
         <button class="go" id="bTut" type="button">チュートリアルをやってみる（約1分）</button>
@@ -726,9 +726,9 @@
             <div class="opt"><span class="lab">空きマスの見せ方</span>
               <div class="seg" data-key="holeStyle"><button type="button" data-v="normal">ふつう</button><button type="button" data-v="strong">しっかり</button><button type="button" data-v="clear">くっきり</button></div>
               <span class="diffnote">しっかり＝白く光る印とふちの目盛り ／ くっきり＝さらに、行と列の帯と、空きマスの印を太く・明るくする</span></div>
-            <div class="opt"><span class="lab">猫の手の出しかた（HARD）</span>
+            <div class="opt"><span class="lab">猫の手の出しかた（NORMAL・HARD）</span>
               <div class="seg" data-key="skillTrigger"><button type="button" data-v="auto">自動</button><button type="button" data-v="manual">手動（タップ）</button></div></div>
-            <div class="opt"><span class="lab">猫の手で消す色（HARD）</span>
+            <div class="opt"><span class="lab">猫の手で消す色（NORMAL・HARD）</span>
               <div class="seg" data-key="skillColor"><button type="button" data-v="most">いちばん多い色</button><button type="button" data-v="bonus">ボーナス色</button><button type="button" data-v="pick">えらぶ</button></div>
               <span class="diffnote">えらぶ＝猫の手が出るとき、ゲームが止まって、下のねこをタップして色を決める</span></div>
           </div>
@@ -1713,7 +1713,7 @@ function drawImpact(size) {
 /* ===== 必殺技（HARD）：消したねこが50匹たまると、1色ぜんぶ消し ===== */
 const SKILL_NEED = 50, SKILL_MUL = 2;
 let skillGauge = 0, skillReady = false, skillReadyMs = 0, skillHold = false, picking = false, attacking = false, skillLast = '', skillLastReady = null;   // skillHold：「あとで」を押したあと。自分でタップするまで、自動では出さない
-const skillOn = () => !tut && settings.colors === 6;
+const skillOn = () => !tut && settings.colors >= 5;     // NORMAL・HARD
 function hidePick() { $('pickBar').hidden = true; }
 function skillReset() { skillGauge = 0; skillReady = false; skillHold = false; attacking = false; wcatSide = 0; clearTimeout(wcatTimer); pawLayer && (pawLayer.textContent = ''); if (picking) { picking = false; } hidePick(); skillLast = ''; skillLastReady = null; }
 function skillAdd(n) {
@@ -1771,11 +1771,14 @@ let wcatH = {}, wcatKey = '', wcatState = 'none', wcatVars = '', wcatSide = 0, w
 function buildWCat(S) {
   const wd = { peek: 0.96, sit: 0.92, crouch: 1.04 }, dim = {}; let Hc = 0; wcatH = {};
   for (const k of ['peek', 'sit', 'crouch']) { const m = WIMG[k], w = S * wd[k], h = w * m.h / m.w; dim[k] = { w, h }; wcatH[k] = h; Hc = Math.max(Hc, h); }
-  const tH = S * 0.68, tW = tH * WIMG.tail.w / WIMG.tail.h, Wc = Math.round(S * 1.2);
+  const tH = S * 0.6, tW = tH * WIMG.tail.w / WIMG.tail.h, Wc = Math.round(S * 1.2);
   wcat.textContent = ''; wcat.style.width = Wc + 'px'; wcat.style.height = Math.round(Hc) + 'px';
   const tail = new Image(); tail.src = WIMG.tail.u; tail.alt = ''; tail.className = 'wtail'; tail.draggable = false;
   tail.style.cssText = 'width:' + tW.toFixed(1) + 'px;height:' + tH.toFixed(1) + 'px';
-  tail.style.setProperty('--tlc', (WIMG.crouch.ex[1] * dim.crouch.w - S * 0.03 + (S - dim.crouch.w) / 2 - tW * 0.5).toFixed(1) + 'px');
+  // しっぽの根元は、かまえる猫のおしり（絵の右はし・上から36%）。体のうしろから、生える
+  const cw = dim.crouch.w, ch = dim.crouch.h, rumpX = (S - cw) / 2 + 0.93 * cw, rumpY = 0.64 * ch;
+  tail.style.setProperty('--tlc', (rumpX - tW / 2).toFixed(1) + 'px');
+  tail.style.setProperty('--tbc', (rumpY - tH * 0.1).toFixed(1) + 'px');
   const body = document.createElement('div'); body.className = 'wbody'; body.style.transformOrigin = (S / 2).toFixed(1) + 'px 100%';
   body.appendChild(tail);   // しっぽも、体といっしょに揺れる
   for (const k of ['peek', 'sit', 'crouch']) {
@@ -1802,7 +1805,7 @@ function placeWCat() {                         // 盤面の枠の、右上に座
 function renderWCat(on) {
   if (attacking) return;
   const f = skillReady ? 1 : skillGauge / SKILL_NEED;
-  const st = !on || f < 0.2 ? 'none' : f < 0.5 ? 'peek' : f < 0.8 ? 'sit' : 'crouch';
+  const st = !on || f < 0.1 ? 'none' : f < 0.5 ? 'peek' : f < 0.8 ? 'sit' : 'crouch';
   if (st !== wcatState) {
     wcatState = st; clearTimeout(wcatTimer);
     const side = st === 'crouch' ? 2 : st === 'sit' ? 1 : 0;
@@ -1827,16 +1830,19 @@ function runPaw(color, members, impactCb, doneCb) {
     const dpr = Math.min(window.devicePixelRatio || 1, 2), tr = tiles.getBoundingClientRect(), u = tr.width / N;
     let sr = 0, sc = 0; members.forEach(q => { sr += q.r; sc += q.c; }); sr /= members.length; sc /= members.length;
     const tx = tr.left + (sc + 0.5) * u, ty = tr.top + (sr + 0.5) * u;
-    const TH = 25 * Math.PI / 180;                                              // 斜めの角度（左上から右下へ）
-    const m = WIMG.paw; let k = Math.round(Math.min(tr.width * 0.5, 200)) / m.w; k = Math.max(k, (ty / Math.cos(TH) + 60) / m.ay);   // 腕が、画面の外まで届くように（1枚の長い絵）
+    // 右はしの、画面の上から3分の1あたりを入口にして、肉球からそこへ向かって斜めに（右上から左下へ）
+    const VW = innerWidth, VH = innerHeight;
+    let TH = Math.atan2(VW + 30 - tx, Math.max(40, ty - VH / 3)); TH = Math.max(22, Math.min(62, TH * 180 / Math.PI)) * Math.PI / 180;
+    const exitD = Math.min((VW + 30 - tx) / Math.sin(TH), ty / Math.cos(TH));      // 肉球から画面のはしまで、腕ぞいの距離
+    const m = WIMG.paw; let k = Math.round(Math.min(tr.width * 0.5, 200)) / m.w; k = Math.max(k, (exitD + 60) / m.ay);   // 腕が、画面の外まで届くように（1枚の長い絵）
     const P = m.w * k, hH = m.h * k, ax = m.ax * k, ay = m.ay * k, top = ty - ay, gh = hH;
     pawLayer.textContent = '';
-    const g = document.createElement('div'); g.className = 'pawg'; g.style.cssText = 'left:' + (tx - ax) + 'px;top:' + top + 'px;width:' + P + 'px;height:' + gh + 'px;visibility:hidden;transform-origin:' + ax + 'px ' + ay + 'px;rotate:-25deg';   // 肉球を中心に、左上へ25°かたむける
+    const g = document.createElement('div'); g.className = 'pawg'; g.style.cssText = 'left:' + (tx - ax) + 'px;top:' + top + 'px;width:' + P + 'px;height:' + gh + 'px;visibility:hidden;transform-origin:' + ax + 'px ' + ay + 'px;rotate:' + (TH * 180 / Math.PI).toFixed(1) + 'deg';   // 肉球を中心に、右上へかたむける
     const hand = new Image(); hand.src = WIMG.paw.u; hand.alt = ''; hand.draggable = false;
     hand.style.cssText = 'left:0;top:0;width:' + P + 'px;height:' + hH + 'px;transform-origin:' + ax + 'px ' + ay + 'px'; g.appendChild(hand);
     const IM = Math.round(P * 1.5), imp = drawImpact(Math.round(IM * dpr)); imp.className = 'pawimp'; imp.style.cssText = 'left:' + (tx - IM / 2) + 'px;top:' + (ty - IM / 2) + 'px;width:' + IM + 'px;height:' + IM + 'px;opacity:0';
     pawLayer.appendChild(g); pawLayer.appendChild(imp);
-    const away = -(ty / Math.cos(TH) + (hH - ay) + 30), wig = 6;     // 腕の向き（左上）へ、画面の外までさがる
+    const away = -(exitD + (hH - ay) + 30), wig = 6;     // 腕の向き（右上）へ、画面の外までさがる
     // 1) 白猫が、飛び出す
     wcat.animate([{ transform: 'translateY(0) scale(1)', opacity: 1 }, { transform: 'translateY(-16px) scale(1.2)', opacity: 1, offset: 0.45 }, { transform: 'translateY(-44px) scale(1.5)', opacity: 0 }], { duration: 300, easing: 'ease-out', fill: 'forwards' });
     tone(420, 0.34, 'sine', 0.05, 0.4);
