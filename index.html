@@ -1766,7 +1766,7 @@ function skillImpact(color) {
 }
 /* ===== 白猫：ゲージに合わせて、のぞく → 座る → うずうず ===== */
 const wcat = $('wcat');
-let wcatKey = '', wcatState = 'none', wcatVars = '', wcatSide = 0, wcatTimer = 0;   // 0＝左（のぞき）　1＝右（おすわり・かまえる）
+let wcatKey = '', wcatState = 'none', wcatVars = '', wcatSide = 0, wcatTimer = 0;   // 0＝左（のぞき・おすわり＝右向きの子）　1＝右（かまえる＝左向きの子）。いつも盤面のほうを向く
 function buildWCat(S) {
   const wd = { peek: 0.96, sit: 1.0, crouch: 1.04 }, dim = {}; let Hc = 0;
   for (const k of ['peek', 'sit', 'crouch']) { const m = WIMG[k], w = S * wd[k], h = w * m.h / m.w; dim[k] = { w, h }; Hc = Math.max(Hc, h); }
@@ -1803,8 +1803,8 @@ function renderWCat(on) {
   const st = !on || f < 0.2 ? 'none' : f < 0.5 ? 'peek' : f < 0.8 ? 'sit' : 'crouch';
   if (st !== wcatState) {
     wcatState = st; clearTimeout(wcatTimer);
-    const side = st === 'peek' ? 0 : 1;
-    if (st !== 'none' && side !== wcatSide && wcat.dataset.p !== 'none') {      // のぞき → おすわり：いったん引っこんで、右から出てくる
+    const side = st === 'crouch' ? 1 : 0;
+    if (st !== 'none' && side !== wcatSide && wcat.dataset.p !== 'none') {      // おすわり → かまえる：いったん引っこんで、右から出てくる
       wcat.dataset.p = 'none';
       wcatTimer = setTimeout(() => { if (wcatState !== 'none') { wcatSide = side; placeWCat(); wcat.dataset.p = wcatState; } }, 480);
     } else { if (st !== 'none') { wcatSide = side; placeWCat(); } wcat.dataset.p = st; }
