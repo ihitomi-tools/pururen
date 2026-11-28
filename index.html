@@ -523,7 +523,7 @@
   .skillrow span { position: absolute; inset: 0; display: grid; place-items: center; font-size: .62rem; font-weight: 800; letter-spacing: .1em; text-shadow: 0 1px 2px rgba(0,0,0,.85); }
   .skillrow.ready { background: linear-gradient(180deg, #ff9fd0, #ff5fa8); cursor: pointer; animation: firepulse .8s ease-in-out infinite alternate; box-shadow: 0 2px 0 #a3235f, 0 0 14px rgba(255,120,190,.7); }
   .skillrow.ready i { display: none; }
-  .skillrow.ready span { font-size: .8rem; color: #3a0020; text-shadow: none; }
+  .skillrow.ready span { font-size: .8rem; color: #3a0020; text-shadow: none; white-space: nowrap; padding: 0 var(--catR, 0px) 0 var(--catL, 0px); }
   @keyframes firepulse { from { transform: scale(1); } to { transform: scale(1.025); } }
   body.tut .skillrow { display: none; }
   .pickbar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 9; padding: 26px 8px 10px; background: linear-gradient(180deg, rgba(11,13,36,0), rgba(11,13,36,.94) 32%); display: flex; flex-direction: column; align-items: center; gap: 6px; }
@@ -550,6 +550,7 @@
   .wcat { position: absolute; z-index: 0; pointer-events: none; opacity: 0; transform: translateY(108%); transition: transform .4s cubic-bezier(.3,1.5,.5,1), opacity .25s; }
   .wcat[data-p="peek"], .wcat[data-p="sit"], .wcat[data-p="crouch"] { opacity: 1; transform: translateY(0); }
   .wcat .wbody { position: absolute; inset: 0; transform-origin: 50% 100%; }
+  .wcat.flip { scale: -1 1; }
   .wcat img { position: absolute; display: block; max-width: none; user-select: none; -webkit-user-drag: none; }
   .wcat .wp { left: 0; bottom: 0; opacity: 0; }
   .wcat[data-p="peek"] .wp.peek, .wcat[data-p="sit"] .wp.sit, .wcat[data-p="crouch"] .wp.crouch { opacity: 1; }
@@ -1714,7 +1715,7 @@ const SKILL_NEED = 50, SKILL_MUL = 2;
 let skillGauge = 0, skillReady = false, skillReadyMs = 0, skillHold = false, picking = false, attacking = false, skillLast = '', skillLastReady = null;   // skillHold：「あとで」を押したあと。自分でタップするまで、自動では出さない
 const skillOn = () => !tut && settings.colors === 6;
 function hidePick() { $('pickBar').hidden = true; }
-function skillReset() { skillGauge = 0; skillReady = false; skillHold = false; attacking = false; pawLayer && (pawLayer.textContent = ''); if (picking) { picking = false; } hidePick(); skillLast = ''; skillLastReady = null; }
+function skillReset() { skillGauge = 0; skillReady = false; skillHold = false; attacking = false; wcatSide = 0; pawLayer && (pawLayer.textContent = ''); if (picking) { picking = false; } hidePick(); skillLast = ''; skillLastReady = null; }
 function skillAdd(n) {
   if (!skillOn() || skillReady || picking || attacking) return;
   skillGauge = Math.min(SKILL_NEED, skillGauge + n);
@@ -1760,13 +1761,14 @@ function skillImpact(color) {
   chain.hit++; chain.idle = 0; maxHit = Math.max(maxHit, chain.hit);
   const g = { id: nextGroupId++, color, members, t: 0, gm: gaugeMs(), hit: chain.hit, mul: SKILL_MUL, flash: false, epoch: 1 };
   skillGauge = 0; skillReady = false; sfx.skill();
+  wcatSide ^= 1; placeWCat();                                  // 白猫は、つぎは反対側から出てくる
   showToast('必殺！猫の手も借りたい！　' + COLOR_NAME[color] + 'ぜんぶ消し　×' + SKILL_MUL);
   pulseHit(color); cheerHop(color, true);
   vanish(g);
 }
 /* ===== 白猫：ゲージに合わせて、のぞく → 座る → うずうず ===== */
 const wcat = $('wcat');
-let wcatKey = '', wcatState = 'none', wcatVars = '';
+let wcatKey = '', wcatState = 'none', wcatVars = '', wcatSide = 0;   // 0＝左から出る　1＝右から出る（出るたびに入れかわる）
 function buildWCat(S) {
   const wd = { peek: 0.96, sit: 1.0, crouch: 1.04 }, dim = {}; let Hc = 0;
   for (const k of ['peek', 'sit', 'crouch']) { const m = WIMG[k], w = S * wd[k], h = w * m.h / m.w; dim[k] = { w, h }; Hc = Math.max(Hc, h); }
@@ -1775,8 +1777,8 @@ function buildWCat(S) {
   const tail = new Image(); tail.src = WIMG.tail.u; tail.alt = ''; tail.className = 'wtail'; tail.draggable = false;
   tail.style.cssText = 'width:' + tW.toFixed(1) + 'px;height:' + tH.toFixed(1) + 'px';
   tail.style.setProperty('--tlc', (WIMG.crouch.ex[1] * dim.crouch.w - S * 0.03 + (S - dim.crouch.w) / 2 - tW * 0.5).toFixed(1) + 'px');
-  wcat.appendChild(tail);
-  const body = document.createElement('div'); body.className = 'wbody';
+  const body = document.createElement('div'); body.className = 'wbody'; body.style.transformOrigin = (S / 2).toFixed(1) + 'px 100%';
+  body.appendChild(tail);   // しっぽも、体といっしょに揺れる
   for (const k of ['peek', 'sit', 'crouch']) {
     const im = new Image(); im.src = WIMG[k].u; im.alt = ''; im.className = 'wp ' + k; im.draggable = false;
     im.style.cssText = 'width:' + dim[k].w.toFixed(1) + 'px;height:' + dim[k].h.toFixed(1) + 'px;left:' + ((S - dim[k].w) / 2).toFixed(1) + 'px';
@@ -1789,7 +1791,14 @@ function placeWCat() {                         // 盤面の枠の、右上に座
   const ft = Math.max(0, bd.top - bw.top), S = Math.round(Math.max(46, Math.min(84, ft + 8)));
   if (String(S) !== wcatKey) { wcatKey = String(S); buildWCat(S); }
   const Wc = parseFloat(wcat.style.width), Hc = parseFloat(wcat.style.height);
-  wcat.style.left = Math.round(bd.right - bw.left - Wc - 20) + 'px'; wcat.style.top = Math.round(bd.top - bw.top - Hc + 6) + 'px';
+  const lx = wcatSide ? bd.right - bw.left - Wc - 20 : bd.left - bw.left + 20;
+  wcat.style.left = Math.round(lx) + 'px'; wcat.style.top = Math.round(bd.top - bw.top - Hc + 6) + 'px';
+  wcat.classList.toggle('flip', !!wcatSide);                 // 右から出るときは、左右反転（いつも盤面のほうを向く）
+  // ゲージの長い文字が、白猫にかくれないように、猫のいる側をあける
+  const row = $('skillRow'), rr = row.getBoundingClientRect();
+  let pl = 0, pr = 0;
+  if (rr.width && bw.top + (bd.top - bw.top - Hc + 6) < rr.bottom - 2) { const cl = bw.left + lx, cr = cl + Wc; if (wcatSide) pr = Math.max(0, rr.right - cl + 6); else pl = Math.max(0, cr - rr.left + 6); }
+  row.style.setProperty('--catL', Math.round(pl) + 'px'); row.style.setProperty('--catR', Math.round(pr) + 'px');
 }
 function renderWCat(on) {
   if (attacking) return;
