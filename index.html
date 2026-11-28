@@ -545,6 +545,27 @@
   .bcbtns { display: flex; gap: 8px; }
   .bcbtns .go { flex: 1; padding: 10px; font-size: .9rem; }
   #bcYes { border-color: rgba(255,143,196,.8); color: #ffc2de; }
+
+  /* ===== 白猫（HARD）：ゲージがたまるほど、のぞく → 座る → うずうず。満タンで、猫の手が降ってくる ===== */
+  .wcat { position: absolute; z-index: 4; pointer-events: none; opacity: 0; transform: translateY(108%); transition: transform .4s cubic-bezier(.3,1.5,.5,1), opacity .25s; }
+  .wcat[data-p="peek"], .wcat[data-p="sit"], .wcat[data-p="crouch"] { opacity: 1; transform: translateY(0); }
+  .wcat .wbody { position: absolute; inset: 0; transform-origin: 50% 100%; }
+  .wcat canvas { position: absolute; }
+  .wcat .wp { left: 0; bottom: 0; opacity: 0; }
+  .wcat[data-p="peek"] .wp.peek, .wcat[data-p="sit"] .wp.sit, .wcat[data-p="crouch"] .wp.crouch { opacity: 1; }
+  .wcat .wtail { bottom: 0; transform-origin: 50% 100%; opacity: 0; animation: wtail var(--tw, 1.5s) ease-in-out infinite alternate; }
+  .wcat[data-p="sit"] .wtail, .wcat[data-p="crouch"] .wtail { opacity: 1; }
+  .wcat[data-p="sit"] .wbody { animation: wsway 2.6s ease-in-out infinite alternate; }
+  .wcat[data-p="crouch"] .wbody { animation: wjit var(--jd, .16s) linear infinite; }
+  @keyframes wtail { from { rotate: -16deg; } to { rotate: 18deg; } }
+  @keyframes wsway { from { rotate: -1.6deg; } to { rotate: 1.6deg; } }
+  @keyframes wjit { 0%, 100% { translate: 0 0; rotate: 0deg; } 25% { translate: calc(var(--ja, 1) * -1px) 0; rotate: -1.4deg; } 75% { translate: calc(var(--ja, 1) * 1px) 0; rotate: 1.4deg; } }
+  .paused .wbody, .paused .wtail { animation-play-state: paused; }
+  #pawLayer { position: fixed; inset: 0; z-index: 40; pointer-events: none; overflow: hidden; }
+  .pawg { position: absolute; transform-origin: 50% 0; will-change: transform; }
+  .pawarm { position: absolute; top: 0; box-sizing: border-box; border-left: var(--lw, 3px) solid #342f45; border-right: var(--lw, 3px) solid #342f45; background: linear-gradient(90deg, #f1f4fa 0%, #fffdf8 30%, #ffffff 50%, #fffaf2 80%, #eef1f8 100%); }
+  .pawg canvas, .pawimp { position: absolute; }
+  @media (prefers-reduced-motion: reduce) { .wcat .wbody, .wcat .wtail { animation: none !important; } }
 </style>
 <style>
   /* ホーム画面から開いたとき、iPhoneの上の時刻バー・下のホームバーに重ならないようにする */
@@ -587,6 +608,7 @@
     <div class="toast" id="toast" hidden></div>
     <p class="dragtip" id="dragtip">盤面の上を親指でなぞると<br>なぞった分だけ空きマスが動くよ</p>
     <div class="cheer" id="cheer" aria-hidden="true" hidden></div>
+    <div class="wcat" id="wcat" aria-hidden="true" data-p="none"></div>
     <div class="pickbar" id="pickBar" hidden><div class="pt">どの色を消す？　ねこをタップ</div><div class="pcats" id="pickCats"></div><button class="chip" id="pickCancel" type="button">あとで</button></div>
     <div class="hitburst" id="hitBurst" aria-hidden="true" data-on="0"><div class="hbrow"><b id="hbNum">0</b><span>HIT!</span></div><small id="hbSub"></small></div>
     <div class="board" id="board" aria-label="8×8の盤面">
@@ -1195,6 +1217,7 @@ const sfx = {
   vanish: h => { const f = NOTES[Math.min(Math.max(h, 1) - 1, NOTES.length - 1)]; tone(f, 0.22, 'triangle', 0.09, 1.5); tone(f * 2, 0.15, 'sine', 0.04, 1.2); if (fever > 0) { tone(f * 3, 0.16, 'sine', 0.035, 1.1); setTimeout(() => tone(f * 4, 0.12, 'sine', 0.025), 60); } },   // フィーバー中は、きらきらを足す
   feverEnd: () => { [1047, 784, 523].forEach((f, i) => setTimeout(() => tone(f, 0.18, 'triangle', 0.05, 0.9), i * 90)); },
   skillReady: () => { tone(880, 0.08, 'square', 0.04); setTimeout(() => tone(1175, 0.1, 'square', 0.04), 80); },
+  paw: () => { tone(110, 0.3, 'sine', 0.16, 0.5); tone(260, 0.1, 'triangle', 0.08, 0.6); setTimeout(() => { tone(620, 0.1, 'triangle', 0.05, 1.5); setTimeout(() => tone(900, 0.16, 'triangle', 0.05, 0.6), 90); }, 150); },   // ぽんっ、そして小さな「にゃっ」
   skill: () => { [392, 523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, 0.16, 'triangle', 0.07), i * 60)); },
   fever: () => { tone(523, 0.1, 'triangle', 0.06); setTimeout(() => tone(784, 0.12, 'triangle', 0.06), 90); setTimeout(() => tone(1046, 0.2, 'triangle', 0.06), 180); },
   lucky: () => { tone(1320, 0.08, 'sine', 0.05); setTimeout(() => tone(1760, 0.12, 'sine', 0.05), 70); },
@@ -1480,6 +1503,7 @@ function layoutExtras() {
   hbEl.dataset.on = showHit ? '1' : '0';
   hbEl.style.fontSize = Math.min(64, Math.round(ft * 0.5)) + 'px';
   if (showCheer) buildCheer(fb);
+  placeWCat();
 }
 function buildCheer(fb) {
   const n = settings.colors, S = Math.round(Math.max(40, Math.min(64, fb * 0.56))), dpr = Math.min(window.devicePixelRatio || 1, 2), W = bwrap.clientWidth;
@@ -1621,14 +1645,335 @@ function renderFever() {
   if (Math.abs(v - feverLast) > 0.004) { $('feverFill').style.setProperty('--f', v.toFixed(3)); feverLast = v; }
   const f = fever > 0; if (f !== feverWasOn) { $('feverLab').textContent = f ? 'FEVER!　得点 ×' + FEVER_MUL : 'フィーバーゲージ'; feverWasOn = f; }
 }
+/* ===== 白猫と猫の手の絵（Geminiの案をもとに）。canvasで1回だけ描いて、使いまわす ===== */
+const WCAT = {
+  fur: '#fffaf2',     // 白毛
+  hi: '#ffffff',      // ツヤ
+  shade: '#dfe6f2',   // 青みのあるうすい影
+  line: '#342f45',    // 焦げ茶〜濃紺のふちどり
+  ear: '#ffc2d2',     // 耳の中のうすいピンク
+  cheek: 'rgba(255,148,176,0.45)',
+  pad: '#ff9fb8',     // 肉球ピンク
+  padHi: '#ffd6e2',
+  padDark: '#e27b98',
+  padLine: '#8a5064',
+};
+
+// 白毛のジェリー風グラデ塗り＋ツヤ＋太めふちどりの共通ヘルパー
+function paintFur(ctx, trace, gx0, gy0, gx1, gy1, lw, gloss) {
+  ctx.save();
+  trace();
+  ctx.clip();
+  const g = ctx.createLinearGradient(gx0, gy0, gx1, gy1);
+  g.addColorStop(0, WCAT.hi);
+  g.addColorStop(0.58, WCAT.fur);
+  g.addColorStop(1, WCAT.shade);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  if (gloss) gloss();
+  ctx.restore();
+
+  trace();
+  ctx.strokeStyle = WCAT.line;
+  ctx.lineWidth = lw;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.stroke();
+}
+
+// ふわふわ毛の輪郭：楕円のふちを、もこもこ小さな山で囲む（lowBias＝下側ほど毛が長い）
+function fluff(ctx, cx, cy, rx, ry, n, amp, lowBias) {
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const a0 = i / n * Math.PI * 2, a1 = (i + 1) / n * Math.PI * 2, am = (a0 + a1) / 2;
+    const k = (1 + (lowBias || 0) * Math.max(0, Math.sin(am))) * (0.78 + 0.44 * (((i * 7) % 3) / 2));
+    if (i === 0) ctx.moveTo(cx + Math.cos(a0) * rx, cy + Math.sin(a0) * ry);
+    ctx.quadraticCurveTo(cx + Math.cos(am) * (rx + amp * k * 2), cy + Math.sin(am) * (ry + amp * k * 2), cx + Math.cos(a1) * rx, cy + Math.sin(a1) * ry);
+  }
+  ctx.closePath();
+}
+// 毛なみのすじ（うすい影色）
+function furStrokes(ctx, list, lw) {
+  ctx.strokeStyle = 'rgba(150,170,205,0.5)'; ctx.lineWidth = lw; ctx.lineCap = 'round';
+  for (const [x0, y0, x1, y1, x2, y2] of list) { ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(x1, y1, x2, y2); ctx.stroke(); }
+}
+
+// 1) 白いペルシャ猫の3ポーズ ('peek' | 'sit' | 'crouch')
+function drawWhiteCat(pose, size) {
+  const s = size, w = s, h = Math.round(s * 0.9);
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const ctx = cv.getContext('2d');
+  const lw = Math.max(2, s * 0.036);
+  const isPeek = pose === 'peek', isCrouch = pose === 'crouch';
+  const hy = isPeek ? 0.86 * s : isCrouch ? 0.55 * s : 0.47 * s;
+  const rx = isCrouch ? 0.36 * s : 0.335 * s, ry = isCrouch ? 0.225 * s : 0.24 * s;
+  const amp = 0.02 * s;
+
+  // 体：ふわっふわの丸（sit / crouch）。胸のたてがみも
+  if (!isPeek) {
+    const by = isCrouch ? 0.86 * s : 0.80 * s, brx = isCrouch ? 0.39 * s : 0.33 * s, bry = isCrouch ? 0.25 * s : 0.27 * s;
+    paintFur(ctx, () => fluff(ctx, 0.5 * s, by, brx, bry, 16, amp, 0.8), 0.2 * s, by - bry, 0.8 * s, h, lw);
+    paintFur(ctx, () => fluff(ctx, 0.5 * s, hy + ry * 0.95, 0.25 * s, 0.1 * s, 10, amp * 0.9, 1), 0.3 * s, hy + ry * 0.8, 0.7 * s, hy + ry * 1.2, lw * 0.9);
+  }
+
+  // 耳：ペルシャは小さく丸く、毛にうずもれる
+  const drawEar = (dir) => {
+    const cx = 0.5 * s, bx1 = cx + dir * 0.15 * s, bx2 = cx + dir * 0.30 * s, by1 = hy - ry * 0.80, by2 = hy - ry * 0.18;
+    const tx = cx + dir * 0.255 * s, ty = hy - ry - 0.075 * s;
+    paintFur(ctx, () => {
+      ctx.beginPath(); ctx.moveTo(bx1, by1);
+      ctx.quadraticCurveTo(tx - dir * 0.045 * s, ty - 0.01 * s, tx, ty);
+      ctx.quadraticCurveTo(bx2 + dir * 0.03 * s, ty + 0.035 * s, bx2, by2); ctx.closePath();
+    }, bx1, ty, bx2, by2, lw);
+    ctx.fillStyle = WCAT.ear; ctx.beginPath();
+    ctx.moveTo(bx1 + dir * 0.035 * s, by1 + 0.02 * s);
+    ctx.quadraticCurveTo(tx - dir * 0.02 * s, ty + 0.03 * s, tx - dir * 0.005 * s, ty + 0.04 * s);
+    ctx.quadraticCurveTo(bx2 - dir * 0.02 * s, by2 - 0.04 * s, bx2 - dir * 0.05 * s, by2 - 0.025 * s); ctx.closePath(); ctx.fill();
+  };
+  drawEar(-1); drawEar(1);
+
+  // 頭：もこもこの毛にかこまれた、まんまる大きなお顔（ほっぺの毛は下ほど長い）
+  paintFur(ctx, () => fluff(ctx, 0.5 * s, hy, rx, ry, 20, amp, 0.9), 0.2 * s, hy - ry, 0.8 * s, hy + ry, lw, () => {
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.beginPath(); ctx.ellipse(0.35 * s, hy - ry * 0.52, 0.07 * s, 0.03 * s, -0.35, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0.27 * s, hy - ry * 0.28, 0.017 * s, 0, Math.PI * 2); ctx.fill();
+    furStrokes(ctx, [
+      [0.5 * s, hy - ry * 0.98, 0.5 * s, hy - ry * 0.7, 0.5 * s, hy - ry * 0.5],
+      [0.43 * s, hy - ry * 0.95, 0.44 * s, hy - ry * 0.72, 0.45 * s, hy - ry * 0.55],
+      [0.57 * s, hy - ry * 0.95, 0.56 * s, hy - ry * 0.72, 0.55 * s, hy - ry * 0.55],
+      [0.2 * s, hy + ry * 0.1, 0.24 * s, hy + ry * 0.2, 0.27 * s, hy + ry * 0.5],
+      [0.8 * s, hy + ry * 0.1, 0.76 * s, hy + ry * 0.2, 0.73 * s, hy + ry * 0.5],
+    ], Math.max(1, s * 0.012));
+  });
+
+  // お顔：ぺちゃ鼻、大きな丸い目（銅色のふち）
+  const eyeY = isPeek ? hy - 0.05 * s : hy + 0.015 * s, eyeShift = isPeek ? 0.04 * s : 0, eyeR = isCrouch ? 0.064 * s : 0.05 * s;
+  ctx.fillStyle = WCAT.cheek;
+  for (const dx of [-0.215, 0.215]) { ctx.beginPath(); ctx.ellipse(0.5 * s + dx * s + eyeShift * 0.4, eyeY + 0.075 * s, 0.05 * s, 0.03 * s, 0, 0, Math.PI * 2); ctx.fill(); }
+  for (const dx of [-0.135, 0.135]) {
+    const ex = 0.5 * s + dx * s + eyeShift;
+    ctx.fillStyle = WCAT.line; ctx.beginPath(); ctx.arc(ex, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#e9983f'; ctx.lineWidth = eyeR * 0.3; ctx.beginPath(); ctx.arc(ex, eyeY, eyeR * 0.82, 0.1 * Math.PI, 0.9 * Math.PI); ctx.stroke();
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(ex - eyeR * 0.3, eyeY - eyeR * 0.34, eyeR * 0.36, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(ex + eyeR * 0.34, eyeY + eyeR * 0.25, eyeR * 0.17, 0, Math.PI * 2); ctx.fill();
+  }
+  if (!isPeek) {
+    const ny = eyeY + 0.058 * s;
+    ctx.fillStyle = '#ff9fb8'; ctx.strokeStyle = WCAT.line; ctx.lineWidth = Math.max(1, s * 0.014);
+    ctx.beginPath(); ctx.moveTo(0.5 * s - 0.024 * s, ny - 0.008 * s); ctx.quadraticCurveTo(0.5 * s, ny - 0.016 * s, 0.5 * s + 0.024 * s, ny - 0.008 * s);
+    ctx.quadraticCurveTo(0.5 * s + 0.01 * s, ny + 0.022 * s, 0.5 * s, ny + 0.026 * s); ctx.quadraticCurveTo(0.5 * s - 0.01 * s, ny + 0.022 * s, 0.5 * s - 0.024 * s, ny - 0.008 * s); ctx.closePath(); ctx.fill(); ctx.stroke();
+    const my = ny + 0.032 * s;
+    ctx.strokeStyle = WCAT.line; ctx.lineWidth = Math.max(1.4, s * 0.02); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(0.482 * s, my, 0.02 * s, 0.1 * Math.PI, 0.9 * Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0.518 * s, my, 0.02 * s, 0.1 * Math.PI, 0.9 * Math.PI); ctx.stroke();
+  }
+
+  // 前足：もふもふ丸（枠の上にのる）
+  if (!isPeek) {
+    const pxOff = isCrouch ? 0.22 * s : 0.17 * s, pw = isCrouch ? 0.115 * s : 0.1 * s, ph = isCrouch ? 0.085 * s : 0.08 * s, py = h - ph * 0.7;
+    for (const dir of [-1, 1]) {
+      const px = 0.5 * s + dir * pxOff;
+      paintFur(ctx, () => fluff(ctx, px, py, pw, ph, 10, amp * 0.55, 0.6), px - pw, py - ph, px + pw, py + ph, lw * 0.85);
+      ctx.strokeStyle = WCAT.line; ctx.lineWidth = Math.max(1.1, s * 0.016); ctx.lineCap = 'round';
+      for (const tx of [-0.3, 0.3]) { ctx.beginPath(); ctx.moveTo(px + tx * pw, py + ph * 0.1); ctx.lineTo(px + tx * pw, py + ph * 0.5); ctx.stroke(); }
+    }
+  }
+  return cv;
+}
+
+// 2) ふさふさ羽毛のしっぽ（根元の軸は (size*0.2, size*0.9)）。もこもこの玉をつなげて、まとめて縁どり
+function drawTail(size) {
+  const s = size, w = Math.round(s * 0.4), h = Math.round(s * 0.9);
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const ctx = cv.getContext('2d');
+  const lw = Math.max(2, s * 0.034);
+  const blobs = [[0.24, 0.9, 0.095], [0.23, 0.76, 0.115], [0.2, 0.62, 0.125], [0.18, 0.48, 0.135], [0.19, 0.34, 0.135], [0.23, 0.22, 0.115], [0.27, 0.13, 0.08]];
+  const trace = (r0) => { ctx.beginPath(); for (const [x, y, r] of blobs) { const R = r * s - r0; for (let i = 0; i < 9; i++) { const a0 = i / 9 * 6.2832, a1 = (i + 1) / 9 * 6.2832, am = (a0 + a1) / 2; if (i === 0) ctx.moveTo(x * s + Math.cos(a0) * R, y * s + Math.sin(a0) * R * 1.12); ctx.quadraticCurveTo(x * s + Math.cos(am) * (R + 0.03 * s), y * s + Math.sin(am) * (R * 1.12 + 0.03 * s), x * s + Math.cos(a1) * R, y * s + Math.sin(a1) * R * 1.12); } ctx.closePath(); } };
+  trace(0); ctx.strokeStyle = WCAT.line; ctx.lineWidth = lw * 2; ctx.lineJoin = 'round'; ctx.stroke();       // 外ふちを先に（内側の線は、あとで塗りつぶして消える）
+  const g = ctx.createLinearGradient(0.05 * s, 0.1 * s, 0.34 * s, h); g.addColorStop(0, WCAT.hi); g.addColorStop(0.55, WCAT.fur); g.addColorStop(1, WCAT.shade);
+  trace(0); ctx.fillStyle = g; ctx.fill();
+  furStrokes(ctx, [[0.14 * s, 0.7 * s, 0.17 * s, 0.55 * s, 0.14 * s, 0.4 * s], [0.25 * s, 0.7 * s, 0.26 * s, 0.55 * s, 0.24 * s, 0.38 * s], [0.2 * s, 0.3 * s, 0.22 * s, 0.22 * s, 0.25 * s, 0.17 * s]], Math.max(1, s * 0.012));
+  ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.ellipse(0.13 * s, 0.38 * s, 0.025 * s, 0.07 * s, 0.1, 0, Math.PI * 2); ctx.fill();
+  return cv;
+}
+
+// 3) 上から降りてくる大きな白猫の手 { canvas, anchor }
+function drawPaw(size) {
+  const s = size;
+  const cv = document.createElement('canvas');
+  cv.width = s;
+  cv.height = Math.round(s * 1.7);
+  const ctx = cv.getContext('2d');
+  const lw = Math.max(2, s * 0.036);
+
+  // まっすぐ縦に伸びるふわふわ腕＋丸い手のひら＋ゆったり開いた4本指
+  const tracePaw = () => {
+    ctx.beginPath();
+    ctx.moveTo(0.28 * s, -0.05 * s);
+    ctx.lineTo(0.72 * s, -0.05 * s);
+    // 右腕（まっすぐ垂直、毛のふわふわ凹凸）
+    ctx.bezierCurveTo(0.76 * s, 0.14 * s, 0.72 * s, 0.28 * s, 0.75 * s, 0.44 * s);
+    ctx.bezierCurveTo(0.78 * s, 0.58 * s, 0.73 * s, 0.72 * s, 0.76 * s, 0.84 * s);
+    // 手のひら右（少し毛がふわっと立つ丸み）
+    ctx.bezierCurveTo(0.86 * s, 0.92 * s, 0.93 * s, 1.08 * s, 0.89 * s, 1.22 * s);
+    // 指4（右端）→ 指3 → 指2 → 指1（左端）ゆったり広げる
+    ctx.bezierCurveTo(0.97 * s, 1.38 * s, 0.82 * s, 1.50 * s, 0.72 * s, 1.38 * s);
+    ctx.bezierCurveTo(0.74 * s, 1.60 * s, 0.53 * s, 1.63 * s, 0.50 * s, 1.46 * s);
+    ctx.bezierCurveTo(0.47 * s, 1.63 * s, 0.26 * s, 1.60 * s, 0.28 * s, 1.38 * s);
+    ctx.bezierCurveTo(0.18 * s, 1.50 * s, 0.03 * s, 1.38 * s, 0.11 * s, 1.22 * s);
+    // 手のひら左〜左腕（まっすぐ垂直）
+    ctx.bezierCurveTo(0.07 * s, 1.08 * s, 0.14 * s, 0.92 * s, 0.24 * s, 0.84 * s);
+    ctx.bezierCurveTo(0.27 * s, 0.72 * s, 0.22 * s, 0.58 * s, 0.25 * s, 0.44 * s);
+    ctx.bezierCurveTo(0.28 * s, 0.28 * s, 0.24 * s, 0.14 * s, 0.28 * s, -0.05 * s);
+    ctx.closePath();
+  };
+
+  paintFur(ctx, tracePaw, 0.18 * s, 0.1 * s, 0.86 * s, 1.58 * s, lw, () => {
+    // 腕の左寄りツヤ
+    const hi = ctx.createLinearGradient(0.26 * s, 0, 0.5 * s, 0);
+    hi.addColorStop(0, 'rgba(255,255,255,0)');
+    hi.addColorStop(0.5, 'rgba(255,255,255,0.75)');
+    hi.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = hi;
+    ctx.fillRect(0.24 * s, 0, 0.28 * s, 0.9 * s);
+
+    // 手のひら左上のツヤ
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath();
+    ctx.ellipse(0.25 * s, 1.0 * s, 0.06 * s, 0.03 * s, -0.55, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(0.19 * s, 1.09 * s, 0.018 * s, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // ふわふわのそでぐち（毛がもこっと広がる）
+  paintFur(ctx, () => fluff(ctx, 0.5 * s, 0.84 * s, 0.3 * s, 0.07 * s, 14, 0.022 * s, 0.9), 0.2 * s, 0.76 * s, 0.8 * s, 0.92 * s, lw * 0.9);
+
+  // 大きな手のひらの肉球（中心: 0.5*s, 1.18*s）
+  ctx.beginPath();
+  ctx.moveTo(0.50 * s, 1.08 * s);
+  ctx.bezierCurveTo(0.59 * s, 1.01 * s, 0.70 * s, 1.07 * s, 0.68 * s, 1.17 * s);
+  ctx.bezierCurveTo(0.67 * s, 1.28 * s, 0.58 * s, 1.33 * s, 0.50 * s, 1.33 * s);
+  ctx.bezierCurveTo(0.42 * s, 1.33 * s, 0.33 * s, 1.28 * s, 0.32 * s, 1.17 * s);
+  ctx.bezierCurveTo(0.30 * s, 1.07 * s, 0.41 * s, 1.01 * s, 0.50 * s, 1.08 * s);
+  ctx.closePath();
+
+  const mg = ctx.createRadialGradient(0.45 * s, 1.13 * s, 0.02 * s, 0.5 * s, 1.19 * s, 0.21 * s);
+  mg.addColorStop(0, WCAT.padHi);
+  mg.addColorStop(0.62, WCAT.pad);
+  mg.addColorStop(1, WCAT.padDark);
+  ctx.fillStyle = mg;
+  ctx.fill();
+  ctx.strokeStyle = WCAT.padLine;
+  ctx.lineWidth = Math.max(1.2, s * 0.017);
+  ctx.stroke();
+
+  // 大肉球ツヤ
+  ctx.fillStyle = 'rgba(255,255,255,0.72)';
+  ctx.beginPath();
+  ctx.ellipse(0.42 * s, 1.13 * s, 0.044 * s, 0.022 * s, -0.35, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 指先の小さな肉球4つ
+  const toes = [
+    [0.19, 1.33, 0.054, 0.066, -0.28],
+    [0.39, 1.45, 0.058, 0.070, -0.10],
+    [0.61, 1.45, 0.058, 0.070, 0.10],
+    [0.81, 1.33, 0.054, 0.066, 0.28],
+  ];
+  for (const [x, y, rx, ry, rot] of toes) {
+    const cx = x * s, cy = y * s;
+    const g = ctx.createRadialGradient(cx - rx * 0.3 * s, cy - ry * 0.3 * s, 0.01 * s, cx, cy, ry * 1.2 * s);
+    g.addColorStop(0, WCAT.padHi);
+    g.addColorStop(0.65, WCAT.pad);
+    g.addColorStop(1, WCAT.padDark);
+
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx * s, ry * s, rot, 0, Math.PI * 2);
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.strokeStyle = WCAT.padLine;
+    ctx.lineWidth = Math.max(1, s * 0.015);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255,255,255,0.72)';
+    ctx.beginPath();
+    ctx.ellipse(cx - rx * 0.28 * s, cy - ry * 0.28 * s, rx * 0.32 * s, ry * 0.20 * s, rot - 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  return { canvas: cv, anchor: { x: s * 0.5, y: s * 1.18 } };
+}
+
+// 4) ぽんっと押した瞬間の衝撃エフェクト
+function drawImpact(size) {
+  const s = size;
+  const c = s * 0.5;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = s;
+  const ctx = cv.getContext('2d');
+
+  // 白〜うす黄色のぼんやり太い輪っか
+  const ring = ctx.createRadialGradient(c, c, s * 0.14, c, c, s * 0.45);
+  ring.addColorStop(0, 'rgba(255,252,220,0)');
+  ring.addColorStop(0.32, 'rgba(255,248,195,0.22)');
+  ring.addColorStop(0.56, 'rgba(255,255,245,0.92)');
+  ring.addColorStop(0.74, 'rgba(255,244,182,0.72)');
+  ring.addColorStop(0.90, 'rgba(255,238,175,0.18)');
+  ring.addColorStop(1, 'rgba(255,235,170,0)');
+  ctx.fillStyle = ring;
+  ctx.beginPath();
+  ctx.arc(c, c, s * 0.46, 0, Math.PI * 2);
+  ctx.fill();
+
+  // きらきら四つ星8個（shadowBlurは1回だけ設定）
+  const stars = [
+    [0.08, 0.38, 0.082, '#ffffff', 0.10],
+    [0.82, 0.41, 0.064, '#fff2a6', -0.20],
+    [1.60, 0.36, 0.074, '#ffc4d8', 0.15],
+    [2.38, 0.42, 0.056, '#ffffff', -0.10],
+    [3.18, 0.37, 0.080, '#fff2a6', 0.22],
+    [3.95, 0.41, 0.062, '#ffc4d8', -0.18],
+    [4.74, 0.36, 0.072, '#ffffff', 0.08],
+    [5.52, 0.42, 0.058, '#fff2a6', -0.15],
+  ];
+
+  ctx.save();
+  ctx.shadowBlur = s * 0.035;
+  ctx.shadowColor = 'rgba(255,250,210,0.9)';
+
+  for (const [ang, dist, r, col, rot] of stars) {
+    const x = c + Math.cos(ang) * dist * s;
+    const y = c + Math.sin(ang) * dist * s;
+    const R = r * s, inR = R * 0.22;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    for (let i = 0; i < 4; i++) {
+      const a0 = (i * Math.PI) / 2, a1 = a0 + Math.PI / 4, a2 = a0 + Math.PI / 2;
+      if (i === 0) ctx.moveTo(Math.cos(a0) * R, Math.sin(a0) * R);
+      ctx.quadraticCurveTo(Math.cos(a1) * inR, Math.sin(a1) * inR, Math.cos(a2) * R, Math.sin(a2) * R);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+
+  return cv;
+}
+
 /* ===== 必殺技（HARD）：消したねこが50匹たまると、1色ぜんぶ消し ===== */
 const SKILL_NEED = 50, SKILL_MUL = 2;
-let skillGauge = 0, skillReady = false, skillReadyMs = 0, skillHold = false, picking = false, skillLast = '', skillLastReady = null;   // skillHold：「あとで」を押したあと。自分でタップするまで、自動では出さない
+let skillGauge = 0, skillReady = false, skillReadyMs = 0, skillHold = false, picking = false, attacking = false, skillLast = '', skillLastReady = null;   // skillHold：「あとで」を押したあと。自分でタップするまで、自動では出さない
 const skillOn = () => !tut && settings.colors === 6;
 function hidePick() { $('pickBar').hidden = true; }
-function skillReset() { skillGauge = 0; skillReady = false; skillHold = false; if (picking) { picking = false; } hidePick(); skillLast = ''; skillLastReady = null; }
+function skillReset() { skillGauge = 0; skillReady = false; skillHold = false; attacking = false; pawLayer && (pawLayer.textContent = ''); if (picking) { picking = false; } hidePick(); skillLast = ''; skillLastReady = null; }
 function skillAdd(n) {
-  if (!skillOn() || skillReady || picking) return;
+  if (!skillOn() || skillReady || picking || attacking) return;
   skillGauge = Math.min(SKILL_NEED, skillGauge + n);
   if (skillGauge >= SKILL_NEED) { skillReady = true; skillReadyMs = 0; skillHold = false; sfx.skillReady(); }
 }
@@ -1639,7 +1984,7 @@ function skillTarget() {
   return cnt.indexOf(Math.max(...cnt));
 }
 function skillFire() {
-  if (!skillReady || !skillOn() || state !== 'play' || picking || (paused && !picking)) return;
+  if (!skillReady || !skillOn() || state !== 'play' || picking || attacking || (paused && !picking)) return;
   if (settings.skillColor === 'pick') return skillPick();
   skillRun(skillTarget());
 }
@@ -1657,7 +2002,15 @@ $('pickCancel').addEventListener('click', () => { if (!picking) return; skillHol
 function skillRun(color) {
   if (picking) { picking = false; paused = false; document.body.classList.remove('paused'); }
   hidePick(); skillHold = false;
-  if (state !== 'play' || !skillReady) return;
+  if (state !== 'play' || !skillReady || attacking) return;
+  const members = [...panels.values()].filter(q => q.color === color); if (!members.length) return;
+  if (reduceMotion || typeof Element.prototype.animate !== 'function') { skillImpact(color); return; }
+  attacking = true; paused = true; document.body.classList.add('paused');    // 手が降りているあいだは、ゲームを止める
+  runPaw(color, members, () => skillImpact(color), () => { attacking = false; if (!picking) { paused = false; document.body.classList.remove('paused'); } });
+}
+// ぽんっと押した瞬間：その色が、ぜんぶ消える
+function skillImpact(color) {
+  if (state !== 'play') return;
   const members = new Set([...panels.values()].filter(q => q.color === color)); if (!members.size) return;
   for (const og of groups) for (const m of members) og.members.delete(m);       // ほかの塊から、消える分を外す
   groups = groups.filter(x => x.members.size > 0);
@@ -1668,8 +2021,76 @@ function skillRun(color) {
   pulseHit(color); cheerHop(color, true);
   vanish(g);
 }
+/* ===== 白猫：ゲージに合わせて、のぞく → 座る → うずうず ===== */
+const wcat = $('wcat');
+let wcatKey = '', wcatState = 'none', wcatVars = '';
+function buildWCat(S) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2), px = Math.round(S * dpr);
+  wcat.textContent = ''; wcat.style.width = S + 'px'; wcat.style.height = Math.round(S * 0.9) + 'px';
+  const tail = drawTail(px); tail.className = 'wtail'; tail.style.cssText = 'width:' + (S * 0.4) + 'px;height:' + (S * 0.9) + 'px;left:' + (S * 0.64) + 'px'; wcat.appendChild(tail);
+  const body = document.createElement('div'); body.className = 'wbody';
+  ['peek', 'sit', 'crouch'].forEach(po => { const c = drawWhiteCat(po, px); c.className = 'wp ' + po; c.style.cssText = 'width:' + S + 'px;height:' + (S * 0.9) + 'px'; body.appendChild(c); });
+  wcat.appendChild(body);
+}
+function placeWCat() {                         // 盤面の枠の、右上の角に座る。空きに合わせて、大きさを変える
+  const bd = board.getBoundingClientRect(), bw = bwrap.getBoundingClientRect(); if (!bw.height) return;
+  const ft = Math.max(0, bd.top - bw.top), S = Math.round(Math.max(40, Math.min(72, ft * 1.25 + 8)));
+  const key = S + '_' + Math.min(window.devicePixelRatio || 1, 2); if (key !== wcatKey) { wcatKey = key; buildWCat(S); }
+  wcat.style.left = Math.round(bd.right - bw.left - S - 12) + 'px'; wcat.style.top = Math.round(bd.top - bw.top - S * 0.9 + 5) + 'px';
+}
+function renderWCat(on) {
+  if (attacking) return;
+  const f = skillReady ? 1 : skillGauge / SKILL_NEED;
+  const st = !on || f < 0.2 ? 'none' : f < 0.5 ? 'peek' : f < 0.8 ? 'sit' : 'crouch';
+  if (st !== wcatState) { wcatState = st; wcat.dataset.p = st; }
+  const u = Math.max(0, Math.min(1, (f - 0.5) / 0.3)), v = Math.max(0, Math.min(1, (f - 0.8) / 0.2));   // しっぽの速さ／うずうずの強さ
+  const vars = Math.round(u * 8) + '_' + Math.round(v * 8);
+  if (vars !== wcatVars) { wcatVars = vars; wcat.style.setProperty('--tw', (1.5 - 0.95 * u).toFixed(2) + 's'); wcat.style.setProperty('--jd', (0.17 - 0.07 * v).toFixed(3) + 's'); wcat.style.setProperty('--ja', (1 + 2.2 * v).toFixed(2)); }
+}
+/* ===== 猫の手：飛び出して、上から降りてきて「ぽんっ」。ちょいちょいして、帰っていく ===== */
+const pawLayer = document.createElement('div'); pawLayer.id = 'pawLayer'; document.body.appendChild(pawLayer);
+function runPaw(color, members, impactCb, doneCb) {
+  let fin = false, hit = false;
+  const impact = () => { if (!hit) { hit = true; try { impactCb(); } catch (e) {} } };
+  const finish = () => { if (fin) return; fin = true; impact(); pawLayer.textContent = ''; wcat.getAnimations().forEach(a => a.cancel()); doneCb(); };
+  const safety = setTimeout(finish, 4500);
+  try {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2), tr = tiles.getBoundingClientRect(), u = tr.width / N;
+    let sr = 0, sc = 0; members.forEach(q => { sr += q.r; sc += q.c; }); sr /= members.length; sc /= members.length;
+    const tx = tr.left + (sc + 0.5) * u, ty = tr.top + (sr + 0.5) * u;
+    const P = Math.round(Math.min(tr.width * 0.5, 190)), lw = Math.max(2, P * 0.036);
+    const ext = Math.max(0, ty - 1.18 * P + 40), top = ty - ext - 1.18 * P, gh = ext + 1.7 * P;
+    pawLayer.textContent = '';
+    const g = document.createElement('div'); g.className = 'pawg'; g.style.cssText = 'left:' + (tx - P / 2) + 'px;top:' + top + 'px;width:' + P + 'px;height:' + gh + 'px;visibility:hidden';
+    const arm = document.createElement('div'); arm.className = 'pawarm'; arm.style.cssText = 'left:' + (0.28 * P - lw / 2) + 'px;width:' + (0.44 * P + lw) + 'px;height:' + (ext + 3) + 'px;--lw:' + lw + 'px'; g.appendChild(arm);
+    const art = drawPaw(Math.round(P * dpr)), hand = art.canvas; hand.style.cssText = 'left:0;top:' + ext + 'px;width:' + P + 'px;height:' + (1.7 * P) + 'px;transform-origin:50% 69%'; g.appendChild(hand);
+    const IM = Math.round(P * 1.8), imp = drawImpact(Math.round(IM * dpr)); imp.className = 'pawimp'; imp.style.cssText = 'left:' + (tx - IM / 2) + 'px;top:' + (ty - IM / 2) + 'px;width:' + IM + 'px;height:' + IM + 'px;opacity:0';
+    pawLayer.appendChild(g); pawLayer.appendChild(imp);
+    const away = -(top + gh) - 30, wig = Math.max(2, Math.min(7, Math.atan(22 / (ty + 0.2 * P)) * 180 / Math.PI));
+    // 1) 白猫が、飛び出す
+    wcat.animate([{ transform: 'translateY(0) scale(1)', opacity: 1 }, { transform: 'translateY(-16px) scale(1.2)', opacity: 1, offset: 0.45 }, { transform: 'translateY(-44px) scale(1.5)', opacity: 0 }], { duration: 300, easing: 'ease-out', fill: 'forwards' });
+    tone(420, 0.34, 'sine', 0.05, 0.4);
+    // 2) 手が、ふらふら降りてくる
+    setTimeout(() => {
+      g.style.visibility = 'visible';
+      const drop = g.animate([{ transform: 'translateY(' + away + 'px) rotate(-8deg)' }, { transform: 'translateY(' + (away * 0.3) + 'px) rotate(5deg)', offset: 0.62 }, { transform: 'translateY(0) rotate(0deg)' }], { duration: 480, easing: 'cubic-bezier(.45,0,.85,.55)', fill: 'forwards' });
+      drop.finished.then(() => {
+        // 3) ぽんっ！　つぶれる／衝撃／画面が揺れる／その色が消える
+        sfx.paw();
+        hand.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.16,.8)', offset: 0.4 }, { transform: 'scale(1)' }], { duration: 260, easing: 'ease-out' });
+        imp.animate([{ transform: 'scale(.35)', opacity: 1 }, { transform: 'scale(1.15)', opacity: 0 }], { duration: 520, easing: 'ease-out', fill: 'forwards' });
+        board.animate([{ transform: 'translate(0,0)' }, { transform: 'translate(-6px,4px)' }, { transform: 'translate(6px,-4px)' }, { transform: 'translate(-4px,-3px)' }, { transform: 'translate(3px,3px)' }, { transform: 'translate(0,0)' }], { duration: 340 });
+        impact();
+        // 4) ちょいちょい、バイバイ → 上へ帰っていく
+        return new Promise(r => setTimeout(r, 200)).then(() => g.animate([{ transform: 'rotate(0deg)' }, { transform: 'rotate(' + wig + 'deg)' }, { transform: 'rotate(' + (-wig) + 'deg)' }, { transform: 'rotate(' + (wig * 0.7) + 'deg)' }, { transform: 'rotate(' + (-wig * 0.7) + 'deg)' }, { transform: 'rotate(0deg)' }], { duration: 650, easing: 'ease-in-out', fill: 'forwards' }).finished)
+          .then(() => g.animate([{ transform: 'translateY(0) rotate(0deg)' }, { transform: 'translateY(' + away + 'px) rotate(-4deg)' }], { duration: 380, easing: 'ease-in', fill: 'forwards' }).finished);
+      }).then(() => { clearTimeout(safety); finish(); }).catch(() => { clearTimeout(safety); finish(); });
+    }, 260);
+  } catch (e) { clearTimeout(safety); finish(); }
+}
 function renderSkill() {
   const row = $('skillRow'), on = state === 'play' && skillOn();
+  renderWCat(on);
   if (row.hidden === on) row.hidden = !on;
   if (!on) return;
   const rdy = skillReady && !picking;
@@ -2069,7 +2490,7 @@ function showToast(text) {
   clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 1900);
 }
 function setPaused(p) {
-  if (state !== 'play' || tut || picking) return;
+  if (state !== 'play' || tut || picking || attacking) return;
   paused = p; document.body.classList.toggle('paused', p);
   showOverlay(p ? 'pause' : null);
   if (p) saveGame();
