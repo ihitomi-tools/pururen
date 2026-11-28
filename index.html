@@ -554,12 +554,9 @@
   .wcat img { position: absolute; display: block; max-width: none; user-select: none; -webkit-user-drag: none; }
   .wcat .wp { left: 0; bottom: 0; opacity: 0; }
   .wcat[data-p="peek"] .wp.peek, .wcat[data-p="sit"] .wp.sit, .wcat[data-p="crouch"] .wp.crouch { opacity: 1; }
-  .wcat[data-p="crouch"] .wtail { left: var(--tlc); }
-  .wcat .wtail { bottom: var(--tbc, 0px); transform-origin: 50% 100%; opacity: 0; animation: wtail var(--tw, 1.5s) ease-in-out infinite alternate; }
-  .wcat[data-p="crouch"] .wtail { opacity: 1; }
+  .wcat .wtail { bottom: var(--tbc, 0px); transform-origin: 50% 100%; opacity: 0; transition: opacity .15s; }
   .wcat[data-p="sit"] .wbody { animation: wsway 2.6s ease-in-out infinite alternate; }
   .wcat[data-p="crouch"] .wbody { animation: wjit var(--jd, .16s) linear infinite; }
-  @keyframes wtail { from { rotate: -14deg; } to { rotate: 46deg; } }
   @keyframes wsway { from { rotate: -1.6deg; } to { rotate: 1.6deg; } }
   @keyframes wjit { 0%, 100% { translate: 0 0; rotate: 0deg; } 25% { translate: calc(var(--ja, 1) * -1px) 0; rotate: -0.5deg; } 75% { translate: calc(var(--ja, 1) * 1px) 0; rotate: 0.5deg; } }
   .paused .wbody, .paused .wtail { animation-play-state: paused; }
@@ -701,7 +698,7 @@
           <li>ボーナスの色：ステージごとに、ボーナスの色が決まっている（緑→青→赤→黄→紫…の順。エンドレスは30秒ごとに交代）。その色を消すと、得点が1.5倍。時間バーの右の「ねこの絵 ×1.5」が、いまのボーナス色だよ（石のデザインが、ねこ以外でも同じ）</li>
           <li>ラッキーねこ（どの難しさでも）：ときどき、次に降ってくる予告のねこに★がつく。降りてくると、金のふちが光るパネルになって、ふちが30秒かけて時計回りに減っていく（なくなると、ふつうのパネルにもどる。塊にくっついているあいだは、減らない）。それを含む塊を消すと、得点が2倍、時間制限モードでは時間も3秒増える。HITをつなげるほど出やすくなって、同時に何個か出ることもある</li>
           <li>フィーバー（NORMAL・HARD）：HITをつなげると、時間バーの下の「フィーバーゲージ」がたまる。満タンで15秒間フィーバー！　得点が2倍になって、ゲージも長くなるので、足しやすい。フィーバー中にHITをつなげると、時間が少しずつのびる</li>
-          <li>必殺！猫の手も借りたい！（NORMAL・HARD）：消したねこが50匹たまると、1色のねこが、ぜんぶ消える！（得点 ×2）　初めは自動で出て、いちばん多い色を消す。「くわしい設定」で、手動で出したり、ボーナス色や好きな色（えらぶ）を消すこともできる。色えらびで「あとで」を押すと、必殺技はためたまま再開して、ピンクの行をタップすると、また出せる</li>
+          <li>必殺！猫の手も借りたい！（NORMAL・HARD）：消したねこがたまると（NORMAL＝80匹、HARD＝50匹）、1色のねこが、ぜんぶ消える！（得点 ×2）　初めは自動で出て、いちばん多い色を消す。「くわしい設定」で、手動で出したり、ボーナス色や好きな色（えらぶ）を消すこともできる。色えらびで「あとで」を押すと、必殺技はためたまま再開して、ピンクの行をタップすると、また出せる</li>
           <li>難しさは色の数で決まる（EASY＝4色 ／ NORMAL＝5色 ／ HARD＝6色）。色が多いほど、つなげにくいので、HARDはゲージを少し長くしてある。そのぶん、得点は難しいほど高くなる（EASY ×1 ／ NORMAL ×2 ／ HARD ×3）</li>
         </ol>
         <button class="go" id="bTut" type="button">チュートリアルをやってみる（約1分）</button>
@@ -1711,15 +1708,16 @@ function drawImpact(size) {
 }
 
 /* ===== 必殺技（HARD）：消したねこが50匹たまると、1色ぜんぶ消し ===== */
-const SKILL_NEED = 50, SKILL_MUL = 2;
+const SKILL_MUL = 2;
+const skillNeed = () => settings.colors === 6 ? 50 : 80;      // 必殺技に必要な数：HARD＝50匹　NORMAL＝80匹
 let skillGauge = 0, skillReady = false, skillReadyMs = 0, skillHold = false, picking = false, attacking = false, skillLast = '', skillLastReady = null;   // skillHold：「あとで」を押したあと。自分でタップするまで、自動では出さない
 const skillOn = () => !tut && settings.colors >= 5;     // NORMAL・HARD
 function hidePick() { $('pickBar').hidden = true; }
 function skillReset() { skillGauge = 0; skillReady = false; skillHold = false; attacking = false; wcatSide = 0; clearTimeout(wcatTimer); pawLayer && (pawLayer.textContent = ''); if (picking) { picking = false; } hidePick(); skillLast = ''; skillLastReady = null; }
 function skillAdd(n) {
   if (!skillOn() || skillReady || picking || attacking) return;
-  skillGauge = Math.min(SKILL_NEED, skillGauge + n);
-  if (skillGauge >= SKILL_NEED) { skillReady = true; skillReadyMs = 0; skillHold = false; sfx.skillReady(); }
+  skillGauge = Math.min(skillNeed(), skillGauge + n);
+  if (skillGauge >= skillNeed()) { skillReady = true; skillReadyMs = 0; skillHold = false; sfx.skillReady(); }
 }
 function colorCounts() { const cnt = Array(settings.colors).fill(0); for (const q of panels.values()) cnt[q.color]++; return cnt; }
 function skillTarget() {
@@ -1767,6 +1765,7 @@ function skillImpact(color) {
 }
 /* ===== 白猫：ゲージに合わせて、のぞく → 座る → うずうず ===== */
 const wcat = $('wcat');
+let wcatTail = null, wcatTailPos = {}, wcatTailAnim = null, wcatTailRate = 0;
 let wcatH = {}, wcatKey = '', wcatState = 'none', wcatVars = '', wcatSide = 0, wcatTimer = 0;   // 0＝左（のぞき）　1＝真ん中（おすわり）　2＝右（かまえる）。ゲージがたまるほど、右へ寄っていく
 function buildWCat(S) {
   const wd = { peek: 0.96, sit: 0.92, crouch: 1.04 }, dim = {}; let Hc = 0; wcatH = {};
@@ -1777,16 +1776,20 @@ function buildWCat(S) {
   tail.style.cssText = 'width:' + tW.toFixed(1) + 'px;height:' + tH.toFixed(1) + 'px';
   // しっぽの根元は、かまえる猫のおしり（絵の右はし・上から36%）。体のうしろから、生える
   const cw = dim.crouch.w, ch = dim.crouch.h, rumpX = (S - cw) / 2 + 0.93 * cw, rumpY = 0.64 * ch;
-  tail.style.setProperty('--tlc', (rumpX - tW / 2).toFixed(1) + 'px');
-  tail.style.setProperty('--tbc', (rumpY - tH * 0.1).toFixed(1) + 'px');
+  // おすわりのときは、体の右下のうしろから（体の右はしは、絵の右から19%・下から14%あたり）
+  const sw = dim.sit.w, sh = dim.sit.h, sitX = (S - sw) / 2 + 0.78 * sw, sitY = 0.14 * sh;
+  wcatTail = tail; wcatTailPos = { crouch: { l: rumpX - tW / 2, b: rumpY - tH * 0.1 }, sit: { l: sitX - tW / 2, b: sitY - tH * 0.1 } };
   const body = document.createElement('div'); body.className = 'wbody'; body.style.transformOrigin = (S / 2).toFixed(1) + 'px 100%';
   body.appendChild(tail);   // しっぽも、体といっしょに揺れる
+  wcatTailAnim = reduceMotion ? null : tail.animate([{ transform: 'rotate(-12deg)' }, { transform: 'rotate(46deg)' }], { duration: 600, direction: 'alternate', iterations: Infinity, easing: 'ease-in-out' });   // ずっとフリフリ
+  wcatTailRate = 0;
   for (const k of ['peek', 'sit', 'crouch']) {
     const im = new Image(); im.src = WIMG[k].u; im.alt = ''; im.className = 'wp ' + k; im.draggable = false;
     im.style.cssText = 'width:' + dim[k].w.toFixed(1) + 'px;height:' + dim[k].h.toFixed(1) + 'px;left:' + ((S - dim[k].w) / 2).toFixed(1) + 'px';
     body.appendChild(im);
   }
   wcat.appendChild(body);
+  setWPose(wcat.dataset.p || 'none');
 }
 function placeWCat() {                         // 盤面の枠の、右上に座る（枠のうしろに、すこしもぐる）。空きに合わせて、大きさを変える
   const bd = board.getBoundingClientRect(), bw = bwrap.getBoundingClientRect(); if (!bw.height) return;
@@ -1802,19 +1805,30 @@ function placeWCat() {                         // 盤面の枠の、右上に座
   if (wcatState !== 'none' && rr.width && bd.top - hp + 6 < rr.bottom - 2) { const cl = bw.left + lx; if (wcatSide === 0) pl = Math.max(0, cl + S * 1.05 - rr.left + 6); else pr = Math.max(0, rr.right - cl + 6); }
   row.style.setProperty('--catL', Math.round(pl) + 'px'); row.style.setProperty('--catR', Math.round(pr) + 'px');
 }
+function setWPose(pz) {
+  wcat.dataset.p = pz;
+  if (!wcatTail) return;
+  const q = wcatTailPos[pz];
+  if (q) { wcatTail.style.left = q.l.toFixed(1) + 'px'; wcatTail.style.bottom = q.b.toFixed(1) + 'px'; wcatTail.style.opacity = 1; } else wcatTail.style.opacity = 0;
+}
 function renderWCat(on) {
   if (attacking) return;
-  const f = skillReady ? 1 : skillGauge / SKILL_NEED;
+  const f = skillReady ? 1 : skillGauge / skillNeed();
   const st = !on || f < 0.1 ? 'none' : f < 0.5 ? 'peek' : f < 0.8 ? 'sit' : 'crouch';
   if (st !== wcatState) {
     wcatState = st; clearTimeout(wcatTimer);
     const side = st === 'crouch' ? 2 : st === 'sit' ? 1 : 0;
     if (st !== 'none' && side !== wcatSide && wcat.dataset.p !== 'none') {      // のぞき → おすわり → かまえる：いったん引っこんで、ひとつ右から出てくる
-      wcat.dataset.p = 'none';
-      wcatTimer = setTimeout(() => { if (wcatState !== 'none') { wcatSide = side; placeWCat(); wcat.dataset.p = wcatState; } }, 230);
-    } else { if (st !== 'none') wcatSide = side; placeWCat(); wcat.dataset.p = st; }
+      setWPose('none');
+      wcatTimer = setTimeout(() => { if (wcatState !== 'none') { wcatSide = side; placeWCat(); setWPose(wcatState); } }, 230);
+    } else { if (st !== 'none') wcatSide = side; placeWCat(); setWPose(st); }
   }
   const u = Math.max(0, Math.min(1, (f - 0.5) / 0.3)), v = Math.max(0, Math.min(1, (f - 0.8) / 0.2));   // しっぽの速さ／うずうずの強さ
+  if (wcatTailAnim) {                                       // しっぽの速さ（おすわり＝ゆっくり、かまえる＝満タンに近づくほど速く）
+    const rate = st === 'crouch' ? 0.6 / (0.7 - 0.3 * v) : 0.7;
+    if (Math.abs(rate - wcatTailRate) > 0.02) { wcatTailRate = rate; wcatTailAnim.playbackRate = rate; }
+    if (paused && wcatTailAnim.playState === 'running') wcatTailAnim.pause(); else if (!paused && wcatTailAnim.playState === 'paused') wcatTailAnim.play();
+  }
   const vars = Math.round(u * 8) + '_' + Math.round(v * 8);
   if (vars !== wcatVars) { wcatVars = vars; wcat.style.setProperty('--tw', (0.7 - 0.3 * v).toFixed(2) + 's'); wcat.style.setProperty('--jd', (0.22 - 0.06 * v).toFixed(3) + 's'); wcat.style.setProperty('--ja', (0.4 + 0.8 * v).toFixed(2)); }
 }
@@ -1871,8 +1885,8 @@ function renderSkill() {
   if (!on) return;
   const rdy = skillReady && !picking;
   if (rdy !== skillLastReady) { row.classList.toggle('ready', rdy); skillLastReady = rdy; }
-  const v = skillReady ? 1 : skillGauge / SKILL_NEED;
-  const txt = rdy ? (settings.skillTrigger === 'auto' && !skillHold ? '猫の手を借りる！' : '猫の手を借りる！　タップして発動') : picking ? '色をえらんでね' : '猫の手ゲージ　' + skillGauge + ' / ' + SKILL_NEED;
+  const v = skillReady ? 1 : skillGauge / skillNeed();
+  const txt = rdy ? (settings.skillTrigger === 'auto' && !skillHold ? '猫の手を借りる！' : '猫の手を借りる！　タップして発動') : picking ? '色をえらんでね' : '猫の手ゲージ　' + skillGauge + ' / ' + skillNeed();
   if (txt !== skillLast) { $('skillLab').textContent = txt; skillLast = txt; $('skillFill').style.setProperty('--s', v.toFixed(3)); }
   else if (!rdy) $('skillFill').style.setProperty('--s', v.toFixed(3));
 }
@@ -2079,8 +2093,9 @@ function sanitizeExtra(x, colors) {
   const num = v => typeof v === 'number' && isFinite(v);
   if (num(x.f)) out.f = Math.max(0, Math.min(FEVER_MAX, x.f));
   if (num(x.fg)) out.fg = Math.max(0, Math.min(99, x.fg));
-  if (num(x.sg)) out.sg = Math.max(0, Math.min(SKILL_NEED, Math.floor(x.sg)));
-  out.sr = x.sr === true && out.sg >= SKILL_NEED;
+  const need = colors === 6 ? 50 : 80;                       // その難しさの、必殺技に必要な数
+  if (num(x.sg)) out.sg = Math.max(0, Math.min(need, Math.floor(x.sg)));
+  out.sr = x.sr === true && out.sg >= need;
   if (Array.isArray(x.lk)) out.lk = x.lk.filter(a => Array.isArray(a) && inb(a[0], a[1]) && num(a[2]) && a[2] > 0).slice(0, LUCKY_MAX).map(a => [a[0], a[1], Math.min(LUCKY_LIFE, a[2])]);
   if (Array.isArray(x.ln)) out.ln = x.ln.filter(a => Array.isArray(a) && Number.isInteger(a[0]) && a[0] >= 0 && a[0] < N && (a[1] === 0 || a[1] === 1)).slice(0, LUCKY_MAX);
   return out;
