@@ -664,7 +664,7 @@
           <li>消去待ちのあいだに別の5枚をつなげて、HITをのばそう</li>
           <li>盤面の上に、次に落ちてくる仲間が列ごとに2つ見えていて、見えたとおりに落ちてくる</li>
           <li>ボーナスの色：ステージごとに、ボーナスの色が決まっている（緑→青→赤→黄→紫…の順。エンドレスは30秒ごとに交代）。その色を消すと、得点が1.5倍。時間バーの右の「ねこの絵 ×1.5」が、いまのボーナス色だよ（石のデザインが、ねこ以外でも同じ）</li>
-          <li>ラッキーねこ（どの難しさでも）：ときどき、次に降ってくる予告のねこに★がつく。降りてくると、金のふちが光るパネルになって、ふちが30秒かけて時計回りに減っていく（なくなると、ふつうのパネルにもどる）。それを含む塊を消すと、得点が2倍、時間制限モードでは時間も3秒増える。HITをつなげるほど出やすくなって、同時に何個か出ることもある</li>
+          <li>ラッキーねこ（どの難しさでも）：ときどき、次に降ってくる予告のねこに★がつく。降りてくると、金のふちが光るパネルになって、ふちが30秒かけて時計回りに減っていく（なくなると、ふつうのパネルにもどる。塊にくっついているあいだは、減らない）。それを含む塊を消すと、得点が2倍、時間制限モードでは時間も3秒増える。HITをつなげるほど出やすくなって、同時に何個か出ることもある</li>
           <li>フィーバー（NORMAL・HARD）：HITをつなげると、時間バーの下の「フィーバーゲージ」がたまる。満タンで15秒間フィーバー！　得点が2倍になって、ゲージも長くなるので、足しやすい。フィーバー中にHITをつなげると、時間が少しずつのびる</li>
           <li>必殺技（HARD）：消したねこが50匹たまると、1色のねこが、ぜんぶ消える！（得点 ×2）　初めは自動で出て、いちばん多い色を消す。「くわしい設定」で、手動で出したり、ボーナス色や好きな色（えらぶ）を消すこともできる</li>
           <li>難しさは色の数で決まる（EASY＝4色 ／ NORMAL＝5色 ／ HARD＝6色）。色が多いほど、つなげにくいので、HARDはゲージを少し長くしてある。そのぶん、得点は難しいほど高くなる（EASY ×1 ／ NORMAL ×2 ／ HARD ×4）</li>
@@ -1563,7 +1563,7 @@ function luckyReset() {
 }
 function luckyTick(dt) {
   if (tut) return;
-  for (const q of panels.values()) if (q.lucky) { q.lkLeft -= dt; if (q.lkLeft <= 0) q.lucky = false; }     // 光っていられる時間が、おわったら、ふつうのパネルにもどる
+  for (const q of panels.values()) if (q.lucky && !q.group) { q.lkLeft -= dt; if (q.lkLeft <= 0) q.lucky = false; }     // 光っていられる時間が、おわったら、ふつうのパネルにもどる（塊にくっついているあいだは、減らない）
   if (luckyCount() >= LUCKY_MAX) return;
   luckyWait -= dt * luckyBoost(); if (luckyWait > 0) return;
   luckyWait = 6000 + Math.random() * 5000;
@@ -3150,7 +3150,7 @@ function render() {
     if (lk && el._ring) {                      // 金のふちが、時計回りに、へっていく
       const pct = Math.max(0, Math.min(100, (1 - p.lkLeft / LUCKY_LIFE) * 100));
       if (Math.abs(pct - el._lp) >= 0.4) { el._ring.style.setProperty('--lp', pct.toFixed(1)); el._lp = pct; }
-      const low = p.lkLeft < 3000; if (low !== el._low) { el._ring.classList.toggle('low', low); el._low = low; }   // のこりわずかで、点滅
+      const low = p.lkLeft < 3000 && !p.group; if (low !== el._low) { el._ring.classList.toggle('low', low); el._low = low; }   // のこりわずかで、点滅
     }
   }
   flushBatch();                                // ためておいた作業を、ここで、1回の強制リフローのあとに実行
