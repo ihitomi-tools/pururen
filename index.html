@@ -1610,14 +1610,14 @@ function renderFever() {
 }
 /* ===== 必殺技（HARD）：消したねこが50匹たまると、1色ぜんぶ消し ===== */
 const SKILL_NEED = 50, SKILL_MUL = 2;
-let skillGauge = 0, skillReady = false, picking = false, skillLast = '', skillLastReady = null;
+let skillGauge = 0, skillReady = false, skillReadyMs = 0, picking = false, skillLast = '', skillLastReady = null;
 const skillOn = () => !tut && settings.colors === 6;
 function hidePick() { $('pickBar').hidden = true; }
 function skillReset() { skillGauge = 0; skillReady = false; if (picking) { picking = false; } hidePick(); skillLast = ''; skillLastReady = null; }
 function skillAdd(n) {
   if (!skillOn() || skillReady || picking) return;
   skillGauge = Math.min(SKILL_NEED, skillGauge + n);
-  if (skillGauge >= SKILL_NEED) { skillReady = true; sfx.skillReady(); if (settings.skillTrigger === 'auto') setTimeout(skillFire, 450); }
+  if (skillGauge >= SKILL_NEED) { skillReady = true; skillReadyMs = 0; sfx.skillReady(); }
 }
 function colorCounts() { const cnt = Array(settings.colors).fill(0); for (const q of panels.values()) cnt[q.color]++; return cnt; }
 function skillTarget() {
@@ -1852,11 +1852,28 @@ function saveGame() {
       grid: grid.map(row => row.map(p => p ? p.color : -1)), hole: { r: hole.r, c: hole.c }, nextQ: nextQ.map(q => q.slice()),
       score, time, playTime, cleared, maxLink, maxHit, chain: { hit: chain.hit, idle: chain.idle },
       groups: groups.map(g => ({ cells: Array.from(g.members).map(p => [p.r, p.c]), t: g.t, hit: g.hit })),
+      x: {   // フィーバー・ラッキー・必殺技の状態（「つづきから」でも続くように）
+        f: Math.round(fever), fg: Math.round(feverGauge), sg: skillGauge, sr: skillReady,
+        lk: [...panels.values()].filter(q => q.lucky).map(q => [q.r, q.c, Math.round(q.lkLeft)]), ln: luckyNexts.map(e => [e.c, e.pos]),
+      },
     }));
   } catch (e) {}
 }
 function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
 // 保存されたものを読んで、壊れていないか確かめる（おかしければ、使わない）
+// 保存の中の、フィーバー・ラッキー・必殺技の部分を、安全な値にして返す（古い保存や、こわれた値でも、困らないように）
+function sanitizeExtra(x, colors) {
+  const out = { f: 0, fg: 0, sg: 0, sr: false, lk: [], ln: [] };
+  if (!x || typeof x !== 'object') return out;
+  const num = v => typeof v === 'number' && isFinite(v);
+  if (num(x.f)) out.f = Math.max(0, Math.min(FEVER_MAX, x.f));
+  if (num(x.fg)) out.fg = Math.max(0, Math.min(99, x.fg));
+  if (num(x.sg)) out.sg = Math.max(0, Math.min(SKILL_NEED, Math.floor(x.sg)));
+  out.sr = x.sr === true && out.sg >= SKILL_NEED;
+  if (Array.isArray(x.lk)) out.lk = x.lk.filter(a => Array.isArray(a) && inb(a[0], a[1]) && num(a[2]) && a[2] > 0).slice(0, LUCKY_MAX).map(a => [a[0], a[1], Math.min(LUCKY_LIFE, a[2])]);
+  if (Array.isArray(x.ln)) out.ln = x.ln.filter(a => Array.isArray(a) && Number.isInteger(a[0]) && a[0] >= 0 && a[0] < N && (a[1] === 0 || a[1] === 1)).slice(0, LUCKY_MAX);
+  return out;
+}
 function readSave() {
   try {
     const raw = lsGet(SAVE_KEY, null); if (!raw) return null;
@@ -1887,9 +1904,14 @@ function resumeGame(d) {
   ensureAudio();
   moveCool = 0; pendingMove = null; midQ.length = 0;
   settings.mode = d.mode; settings.colors = d.colors; lsSet('ren4-mode', d.mode); lsSet('ren4-colors', String(d.colors)); runBeat = false; luckyReset(); feverReset(); skillReset();
+  const X = sanitizeExtra(d.x, d.colors);                      // フィーバー・必殺技・ラッキーの予告を、もどす（グループを作る前に、フィーバーを先にもどす）
+  if (feverOn() && X.f > 0) { fever = X.f; document.body.classList.add('fever'); startFeverMusic(); } else if (feverOn()) feverGauge = X.fg;
+  if (skillOn()) { skillGauge = X.sg; skillReady = X.sr; }
+  luckyNexts = X.ln.map(a => ({ c: a[0], pos: a[1] }));
   grid = Array.from({ length: N }, () => Array(N).fill(null)); panels = new Map(); groups = []; clearDom();
   for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (d.grid[r][c] >= 0) makePanel(d.grid[r][c], r, c);
   hole = { r: d.hole.r, c: d.hole.c };
+  for (const a of X.lk) { const q = grid[a[0]][a[1]]; if (q) { q.lucky = true; q.lkLeft = a[2]; } }   // 光っているパネルを、のこりの時間ごと、もどす
   nextQ = d.nextQ.map(q => q.slice()); ncols.forEach(x => { x._k = ''; }); renderNext();
   for (const gd of d.groups) {
     const members = gd.cells.map(([r, c]) => grid[r][c]).filter(p => p && !p.group);
@@ -2049,6 +2071,7 @@ function update(dt) {
   const stg = stage(); if (stg !== lastStage) { if (stg > lastStage) showToast(stg === SPURT ? 'ラストスパート！　ここから時間が少しずつ速く減るよ' : stg > SPURT ? 'ラストスパート　ステージ ' + (stg + 1) : 'スピードアップ！　ステージ ' + (stg + 1)); lastStage = stg; }
   drainMoves(dt);
   luckyTick(dt);
+  if (skillReady && !picking) { skillReadyMs += dt; if (settings.skillTrigger === 'auto' && skillReadyMs > 450) skillFire(); } else skillReadyMs = 0;   // 満タンから0.45秒後に、自動で発動
   if (fever > 0) { fever -= dt; if (fever <= 0) endFever(); }
   for (const g of groups) g.t += dt;
   for (const g of groups.filter(x => x.t >= gmOf(x))) { if (groups.includes(g)) vanish(g); }
