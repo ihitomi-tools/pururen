@@ -520,7 +520,7 @@
   .skillrow { position: relative; display: block; width: 100%; height: 22px; margin-top: -4px; padding: 0; border: 0; border-radius: 999px; background: rgba(0,0,0,.38); overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,.5); color: #fff; cursor: default; }
   .skillrow[hidden] { display: none; }
   .skillrow i { position: absolute; inset: 0; border-radius: inherit; transform-origin: left; transform: scaleX(var(--s, 0)); background: linear-gradient(90deg, #7fe0ff, #ff8fc4); }
-  .skillrow span { position: absolute; inset: 0; display: grid; place-items: center; font-size: .62rem; font-weight: 800; letter-spacing: .1em; text-shadow: 0 1px 2px rgba(0,0,0,.85); }
+  .skillrow span { position: absolute; inset: 0; box-sizing: border-box; padding: 0 var(--catR, 0px) 0 var(--catL, 0px); display: grid; place-items: center; white-space: nowrap; font-size: .62rem; font-weight: 800; letter-spacing: .1em; text-shadow: 0 1px 2px rgba(0,0,0,.85); }
   .skillrow.ready { background: linear-gradient(180deg, #ff9fd0, #ff5fa8); cursor: pointer; animation: firepulse .8s ease-in-out infinite alternate; box-shadow: 0 2px 0 #a3235f, 0 0 14px rgba(255,120,190,.7); }
   .skillrow.ready i { display: none; }
   .skillrow.ready span { font-size: .8rem; color: #3a0020; text-shadow: none; white-space: nowrap; padding: 0 var(--catR, 0px) 0 var(--catL, 0px); }
@@ -1766,7 +1766,7 @@ function skillImpact(color) {
 }
 /* ===== 白猫：ゲージに合わせて、のぞく → 座る → うずうず ===== */
 const wcat = $('wcat');
-let wcatKey = '', wcatState = 'none', wcatVars = '', wcatSide = 0, wcatTimer = 0;   // 0＝左（のぞき・おすわり＝右向きの子）　1＝右（かまえる＝左向きの子）。いつも盤面のほうを向く
+let wcatKey = '', wcatState = 'none', wcatVars = '', wcatSide = 0, wcatTimer = 0;   // 0＝左（のぞき）　1＝真ん中（おすわり）　2＝右（かまえる）。ゲージがたまるほど、右へ寄っていく
 function buildWCat(S) {
   const wd = { peek: 0.96, sit: 1.0, crouch: 1.04 }, dim = {}; let Hc = 0;
   for (const k of ['peek', 'sit', 'crouch']) { const m = WIMG[k], w = S * wd[k], h = w * m.h / m.w; dim[k] = { w, h }; Hc = Math.max(Hc, h); }
@@ -1789,12 +1789,12 @@ function placeWCat() {                         // 盤面の枠の、右上に座
   const ft = Math.max(0, bd.top - bw.top), S = Math.round(Math.max(46, Math.min(84, ft + 8)));
   if (String(S) !== wcatKey) { wcatKey = String(S); buildWCat(S); }
   const Wc = parseFloat(wcat.style.width), Hc = parseFloat(wcat.style.height);
-  const lx = wcatSide ? bd.right - bw.left - Wc - 20 : bd.left - bw.left + 20;
+  const lx = wcatSide === 2 ? bd.right - bw.left - Wc - 20 : wcatSide === 1 ? (bd.left + bd.right) / 2 - bw.left - S / 2 : bd.left - bw.left + 20;
   wcat.style.left = Math.round(lx) + 'px'; wcat.style.top = Math.round(bd.top - bw.top - Hc + 6) + 'px';
-  // ゲージの長い文字が、白猫にかくれないように、猫のいる側をあける
+  // ゲージの文字が、白猫にかくれないように、猫のいる側をあける（猫が出ていないときは、あけない）
   const row = $('skillRow'), rr = row.getBoundingClientRect();
   let pl = 0, pr = 0;
-  if (rr.width && bw.top + (bd.top - bw.top - Hc + 6) < rr.bottom - 2) { const cl = bw.left + lx, cr = cl + Wc; if (wcatSide) pr = Math.max(0, rr.right - cl + 6); else pl = Math.max(0, cr - rr.left + 6); }
+  if (wcatState !== 'none' && rr.width && bw.top + (bd.top - bw.top - Hc + 6) < rr.bottom - 2) { const cl = bw.left + lx; if (wcatSide === 0) pl = Math.max(0, cl + S * 1.05 - rr.left + 6); else pr = Math.max(0, rr.right - cl + 6); }
   row.style.setProperty('--catL', Math.round(pl) + 'px'); row.style.setProperty('--catR', Math.round(pr) + 'px');
 }
 function renderWCat(on) {
@@ -1803,11 +1803,11 @@ function renderWCat(on) {
   const st = !on || f < 0.2 ? 'none' : f < 0.5 ? 'peek' : f < 0.8 ? 'sit' : 'crouch';
   if (st !== wcatState) {
     wcatState = st; clearTimeout(wcatTimer);
-    const side = st === 'crouch' ? 1 : 0;
-    if (st !== 'none' && side !== wcatSide && wcat.dataset.p !== 'none') {      // おすわり → かまえる：いったん引っこんで、右から出てくる
+    const side = st === 'crouch' ? 2 : st === 'sit' ? 1 : 0;
+    if (st !== 'none' && side !== wcatSide && wcat.dataset.p !== 'none') {      // のぞき → おすわり → かまえる：いったん引っこんで、ひとつ右から出てくる
       wcat.dataset.p = 'none';
       wcatTimer = setTimeout(() => { if (wcatState !== 'none') { wcatSide = side; placeWCat(); wcat.dataset.p = wcatState; } }, 480);
-    } else { if (st !== 'none') { wcatSide = side; placeWCat(); } wcat.dataset.p = st; }
+    } else { if (st !== 'none') wcatSide = side; placeWCat(); wcat.dataset.p = st; }
   }
   const u = Math.max(0, Math.min(1, (f - 0.5) / 0.3)), v = Math.max(0, Math.min(1, (f - 0.8) / 0.2));   // しっぽの速さ／うずうずの強さ
   const vars = Math.round(u * 8) + '_' + Math.round(v * 8);
