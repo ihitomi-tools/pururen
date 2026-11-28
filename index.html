@@ -493,10 +493,12 @@
   body.tut .bonuschip { display: none; }
 
   /* ===== ラッキーねこ（光るパネル）とフィーバー ===== */
-  .tile.lucky .face { box-shadow: 0 0 0 2px #ffd54a, 0 0 14px 4px rgba(255,213,74,.9); }
-  .tile.lucky.grp .face { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #ffd54a, 0 0 14px 4px rgba(255,213,74,.9); }
-  .tile.lucky::after { content: "★"; position: absolute; right: 0; top: -3px; z-index: 5; font-size: 17px; line-height: 1; color: #ffe27a; text-shadow: 0 0 6px #ffb300, 0 0 2px #fff; pointer-events: none; animation: luckytwinkle 1.1s ease-in-out infinite alternate; }
-  @keyframes luckytwinkle { from { transform: scale(.7) rotate(-14deg); opacity: .7; } to { transform: scale(1.15) rotate(14deg); opacity: 1; } }
+  .tile.lucky { z-index: 4; }
+  .tile.lucky .face { box-shadow: 0 0 0 3px #ffb300, 0 0 0 5px rgba(70,35,0,.6), 0 0 18px 6px rgba(255,205,50,.95); animation: luckyring .8s ease-in-out infinite alternate; }
+  .tile.lucky.grp .face { box-shadow: 0 0 0 2px #fff, 0 0 0 5px #ffb300, 0 0 0 7px rgba(70,35,0,.6), 0 0 18px 6px rgba(255,205,50,.95); animation: luckyring .8s ease-in-out infinite alternate; }
+  @keyframes luckyring { from { filter: brightness(1); } to { filter: brightness(1.28) saturate(1.2); } }
+  .tile.lucky::after { content: "★"; position: absolute; right: -7px; top: -11px; z-index: 6; font-size: 27px; line-height: 1; color: #ffe27a; -webkit-text-stroke: 1px #b36b00; text-shadow: 0 0 8px #ffb300, 0 0 3px #fff; pointer-events: none; animation: luckytwinkle 1.1s ease-in-out infinite alternate; }
+  @keyframes luckytwinkle { from { transform: scale(.75) rotate(-14deg); opacity: .8; } to { transform: scale(1.2) rotate(14deg); opacity: 1; } }
   .feverrow { margin-top: -4px; }
   .feverrow[hidden] { display: none; }
   .feverbar { position: relative; height: 12px; border-radius: 999px; background: rgba(0,0,0,.38); overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,.5); }
@@ -506,7 +508,7 @@
   body.fever #board { box-shadow: 0 0 0 2px #ffb347, 0 0 22px 4px rgba(255,150,70,.75); }
   body.fever::after { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(ellipse at 50% 100%, rgba(255,120,70,.34), rgba(255,60,140,.14) 55%, rgba(255,60,140,0) 80%); }
   body.tut .feverrow { display: none; }
-  @media (prefers-reduced-motion: reduce) { .tile.lucky::after { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .tile.lucky::after, .tile.lucky .face { animation: none; } }
 </style>
 <style>
   /* ホーム画面から開いたとき、iPhoneの上の時刻バー・下のホームバーに重ならないようにする */
@@ -630,7 +632,7 @@
           <li>盤面の上に、次に落ちてくる仲間が列ごとに2つ見えていて、見えたとおりに落ちてくる</li>
           <li>ボーナスの色：ステージごとに、ボーナスの色が決まっている（緑→青→赤→黄→紫…の順。エンドレスは30秒ごとに交代）。その色を消すと、得点が1.5倍。時間バーの右の「ねこの絵 ×1.5」が、いまのボーナス色だよ（石のデザインが、ねこ以外でも同じ）</li>
           <li>ラッキーねこ（どの難しさでも）：ときどき、星がきらきら光るパネルが1枚出る。それを含む塊を消すと、得点が2倍になって、時間制限モードでは時間も3秒増える</li>
-          <li>フィーバー（NORMAL・HARD）：HITをつなげると、時間バーの下の「フィーバーゲージ」がたまる。満タンで10秒間フィーバー！　得点が2倍になって、ゲージも長くなるので、足しやすい</li>
+          <li>フィーバー（NORMAL・HARD）：HITをつなげると、時間バーの下の「フィーバーゲージ」がたまる。満タンで15秒間フィーバー！　得点が2倍になって、ゲージも長くなるので、足しやすい。フィーバー中にHITをつなげると、時間が少しずつのびる</li>
           <li>難しさは色の数で決まる（EASY＝4色 ／ NORMAL＝5色 ／ HARD＝6色）。色が多いほど、つなげにくいので、HARDはゲージを少し長くしてある。そのぶん、得点は難しいほど高くなる（EASY ×1 ／ NORMAL ×2 ／ HARD ×4）</li>
         </ol>
         <button class="go" id="bTut" type="button">チュートリアルをやってみる（約1分）</button>
@@ -1513,14 +1515,17 @@ function luckyTick(dt) {
   luckyP = cand[Math.floor(Math.random() * cand.length)]; luckyP.lucky = true; luckyLeft = LUCKY_LIFE;
 }
 /* ===== フィーバー（NORMAL・HARD）：HITをつなげてゲージが満タンになると、10秒間、得点 ×2・ゲージが長くなる ===== */
-const FEVER_ADD = 3, FEVER_MS = 10000, FEVER_MUL = 2, FEVER_GAUGE_K = 1.5;
+const FEVER_ADD = 5, FEVER_MS = 15000, FEVER_EXT = 400, FEVER_MAX = 30000, FEVER_MUL = 2, FEVER_GAUGE_K = 1.5;   // ためる量（1回のつながり）／続く時間／フィーバー中にHITがつながるごとにのびる時間／のびる上限
 let fever = 0, feverGauge = 0, feverLast = -1, feverWasOn = null;
 const feverOn = () => !tut && settings.colors >= 5;
 function feverReset() { fever = 0; feverGauge = 0; feverLast = -1; feverWasOn = null; document.body.classList.remove('fever'); }
-function feverAdd(n) { if (!feverOn() || fever > 0) return; feverGauge = Math.min(100, feverGauge + n); if (feverGauge >= 100) startFever(); }
+function feverAdd(n) {
+  if (!feverOn()) return;
+  if (fever > 0) { fever = Math.min(FEVER_MAX, fever + FEVER_EXT); return; }       // フィーバー中：つなげるたびに、少しのびる
+  feverGauge = Math.min(100, feverGauge + n); if (feverGauge >= 100) startFever(); }
 function startFever() {
   fever = FEVER_MS; document.body.classList.add('fever'); sfx.fever();
-  showToast('フィーバー！　' + (FEVER_MS / 1000) + '秒間　得点 ×' + FEVER_MUL + '　ゲージも長いよ');
+  showToast('フィーバー！　' + (FEVER_MS / 1000) + '秒間　得点 ×' + FEVER_MUL + '　つなげるほどのびるよ');
   cheerCats.forEach((el, k) => { if (el) setTimeout(() => cheerHop(k, true), k * 70); });
 }
 function endFever() { fever = 0; feverGauge = 0; document.body.classList.remove('fever'); }
@@ -1528,7 +1533,7 @@ function renderFever() {
   const row = $('feverRow'), on = state === 'play' && feverOn();
   if (row.hidden === on) row.hidden = !on;
   if (!on) return;
-  const v = fever > 0 ? fever / FEVER_MS : feverGauge / 100;
+  const v = fever > 0 ? Math.min(1, fever / FEVER_MS) : feverGauge / 100;
   if (Math.abs(v - feverLast) > 0.004) { $('feverFill').style.setProperty('--f', v.toFixed(3)); feverLast = v; }
   const f = fever > 0; if (f !== feverWasOn) { $('feverLab').textContent = f ? 'FEVER!　得点 ×' + FEVER_MUL : 'フィーバーゲージ'; feverWasOn = f; }
 }
