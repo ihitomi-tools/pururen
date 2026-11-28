@@ -535,6 +535,16 @@
   .pcat b { position: absolute; right: -5px; bottom: -5px; min-width: 19px; padding: 0 4px; border-radius: 999px; background: #ffd45a; color: #4a2400; font-size: .64rem; line-height: 17px; text-align: center; }
   .pcat.max { border-color: #ffd45a; box-shadow: 0 0 10px rgba(255,212,90,.7); }
   @media (prefers-reduced-motion: reduce) { .skillrow.ready { animation: none; } }
+
+  /* 自己ベストのリセット：ふだんは押せない（数字を長押し → 確認）。見た目には、ヒントを出さない */
+  .bl-v[data-m], .bl-t[data-all] { user-select: none; -webkit-user-select: none; }
+  .bl-v.holding, .bl-t.holding { outline: 2px solid #ff8fc4; box-shadow: 0 0 12px rgba(255,143,196,.8); transition: box-shadow .9s linear; }
+  .bestconfirm { background: rgba(255,95,168,.14); border: 1px solid rgba(255,143,196,.7); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .bestconfirm[hidden] { display: none; }
+  .bestconfirm p { margin: 0; font-size: .86rem; line-height: 1.5; }
+  .bcbtns { display: flex; gap: 8px; }
+  .bcbtns .go { flex: 1; padding: 10px; font-size: .9rem; }
+  #bcYes { border-color: rgba(255,143,196,.8); color: #ffc2de; }
 </style>
 <style>
   /* ホーム画面から開いたとき、iPhoneの上の時刻バー・下のホームバーに重ならないようにする */
@@ -601,7 +611,7 @@
           <div class="opt"><span class="lab">モード</span>
             <div class="seg" data-key="mode"><button type="button" data-v="time">時間制限</button><button type="button" data-v="endless">エンドレス</button></div></div>
           <div class="opt"><span class="lab">難しさ</span>
-            <div class="seg" data-key="colors"><button type="button" data-v="4">EASY<small>4色・×1</small></button><button type="button" data-v="5">NORMAL<small>5色・×2</small></button><button type="button" data-v="6">HARD<small>6色・×4</small></button></div></div>
+            <div class="seg" data-key="colors"><button type="button" data-v="4">EASY<small>4色・×1</small></button><button type="button" data-v="5">NORMAL<small>5色・×2</small></button><button type="button" data-v="6">HARD<small>6色・×3</small></button></div></div>
           <div class="bestline" id="bestLine"></div>
         </div>
         <div class="tbtns">
@@ -648,6 +658,7 @@
     <div class="overlay" id="ovBest" hidden>
       <div class="sheet">
         <div class="bestlist" id="bestNote" aria-label="自己ベスト"></div>
+        <div class="bestconfirm" id="bestConfirm" hidden><p id="bcText"></p><div class="bcbtns"><button class="go sub" id="bcYes" type="button">消す</button><button class="go" id="bcNo" type="button">やめる</button></div></div>
         <button class="go sub" id="bBestBack" type="button">もどる</button>
       </div>
     </div>
@@ -667,7 +678,7 @@
           <li>ラッキーねこ（どの難しさでも）：ときどき、次に降ってくる予告のねこに★がつく。降りてくると、金のふちが光るパネルになって、ふちが30秒かけて時計回りに減っていく（なくなると、ふつうのパネルにもどる。塊にくっついているあいだは、減らない）。それを含む塊を消すと、得点が2倍、時間制限モードでは時間も3秒増える。HITをつなげるほど出やすくなって、同時に何個か出ることもある</li>
           <li>フィーバー（NORMAL・HARD）：HITをつなげると、時間バーの下の「フィーバーゲージ」がたまる。満タンで15秒間フィーバー！　得点が2倍になって、ゲージも長くなるので、足しやすい。フィーバー中にHITをつなげると、時間が少しずつのびる</li>
           <li>必殺技（HARD）：消したねこが50匹たまると、1色のねこが、ぜんぶ消える！（得点 ×2）　初めは自動で出て、いちばん多い色を消す。「くわしい設定」で、手動で出したり、ボーナス色や好きな色（えらぶ）を消すこともできる</li>
-          <li>難しさは色の数で決まる（EASY＝4色 ／ NORMAL＝5色 ／ HARD＝6色）。色が多いほど、つなげにくいので、HARDはゲージを少し長くしてある。そのぶん、得点は難しいほど高くなる（EASY ×1 ／ NORMAL ×2 ／ HARD ×4）</li>
+          <li>難しさは色の数で決まる（EASY＝4色 ／ NORMAL＝5色 ／ HARD＝6色）。色が多いほど、つなげにくいので、HARDはゲージを少し長くしてある。そのぶん、得点は難しいほど高くなる（EASY ×1 ／ NORMAL ×2 ／ HARD ×3）</li>
         </ol>
         <button class="go" id="bTut" type="button">チュートリアルをやってみる（約1分）</button>
         <button class="go sub" id="bHowBack" type="button">もどる</button>
@@ -1114,6 +1125,8 @@ let tut = null;                      // チュートリアル中だけ、{ step,
 
 const $ = id => document.getElementById(id);
 const board = $('board'), tiles = $('tiles'), holeEl = $('hole'), fx = $('fx'), dragTip = $('dragtip');
+function tipGone() { if (!dragTip.classList.contains('gone')) { dragTip.classList.add('gone'); lsSet('ren4-tipgone', '1'); } }   // 一度でも空きマスを動かしたら、「なぞると動くよ」の説明は、もう出さない
+if (lsGet('ren4-tipgone', '0') === '1') dragTip.classList.add('gone');
 const guideEls = Array.from(document.querySelectorAll('.guide')), guideRow = document.querySelector('.guide.row');
 // 落ちる見た目を始める（位置そのものは、もう新しい場所に移っている）
 // 「クラスを外す → 見た目を確定させる(強制リフロー) → クラスをつける」でアニメーションをやり直す。
@@ -1507,7 +1520,7 @@ if (window.ResizeObserver) new ResizeObserver(layoutExtras).observe(bwrap);
 window.addEventListener('resize', layoutExtras);
 
 /* ===== ボーナスねこ ===== */
-const DIFF_SCORE = { 4: 1, 5: 2, 6: 4 };            // 難しさごとの得点の倍率（EASYが基準。色が多いほど高い）
+const DIFF_SCORE = { 4: 1, 5: 2, 6: 3 };            // 難しさごとの得点の倍率（EASYが基準。色が多いほど高い）
 const diffMul = () => tut ? 1 : (DIFF_SCORE[settings.colors] || 1);
 const BONUS_MUL = 1.5;                                   // ボーナス色を消したときの得点の倍率
 const BONUS_ORDER = [2, 1, 0, 3, 4, 5];                  // ステージ1から順に：緑・青・赤・黄・紫…（タイトルのねこと同じ並び）
@@ -1686,6 +1699,7 @@ function moveHole(dr, dc) {
   hole = { r: nr, c: nc };
   if (cueTimer) endCue();
   if (tut) tut.moves++;
+  tipGone();
   sfx.move();
   resolve();
   return true;
@@ -3266,7 +3280,7 @@ board.addEventListener('pointermove', e => {
   const moved = drag.feel === 'steady' ? steadyMove(drag.st, e.clientX, e.clientY)
     : drag.feel === 'mid' ? stepperMove(drag.st, e.clientX, e.clientY, queueMid, cellPx() * MID.k * dragFactor())
     : stepperMove(drag.st, e.clientX, e.clientY);
-  if (moved) { drag.moved = true; dragTip.classList.add('gone'); }
+  if (moved) { drag.moved = true; tipGone(); }
 });
 function endDrag(e, cancelled) {
   if (!drag) return;
@@ -3367,13 +3381,37 @@ function renderBestList() {
     h += '<div class="bl-r">' + name + '</div>';
     for (const [m] of modes) {
       const v = parseInt(lsGet(bestKeyOf(m, c), '0'), 10) || 0;
-      h += '<div class="bl-v' + (m === settings.mode && c === settings.colors ? ' on' : '') + (v ? '' : ' none') + '">' + (v ? v.toLocaleString('ja-JP') : '—') + '</div>';
+      h += '<div class="bl-v' + (m === settings.mode && c === settings.colors ? ' on' : '') + (v ? '' : ' none') + '" data-m="' + m + '" data-c="' + c + '">' + (v ? v.toLocaleString('ja-JP') : '—') + '</div>';
     }
   }
-  el.innerHTML = '<div class="bl-t">自己ベスト</div><div class="bl-g">' + h + '</div>';
+  el.innerHTML = '<div class="bl-t" data-all="1">自己ベスト</div><div class="bl-g">' + h + '</div>';
   const cur = parseInt(lsGet(bestKey(), '0'), 10) || 0;
   const bl = $('bestLine'); if (bl) bl.innerHTML = DIFF_NAME[settings.colors] + '・' + (settings.mode === 'time' ? '時間制限' : 'エンドレス') + 'の自己ベスト　<b>' + (cur ? cur.toLocaleString('ja-JP') : '—') + '</b>';
 }
+/* ===== 自己ベストのリセット（この端末の分だけ。数字を長押し → 確認 → 消す） ===== */
+let resetTimer = 0, resetTarget = null, resetPending = null;
+function bestDel(m, c) { try { localStorage.removeItem(bestKeyOf(m, c)); } catch (e) {} }
+function showResetConfirm(t) {
+  resetPending = t;
+  if (t.all) $('bcText').textContent = 'この端末の自己ベストを、ぜんぶ消しますか？（元にもどせません）';
+  else $('bcText').textContent = DIFF_NAME[t.c] + '・' + (t.m === 'time' ? '時間制限' : 'エンドレス') + 'の自己ベスト（' + (parseInt(lsGet(bestKeyOf(t.m, t.c), '0'), 10) || 0).toLocaleString('ja-JP') + '点）を、消しますか？（元にもどせません）';
+  $('bestConfirm').hidden = false;
+}
+function endHold() { clearTimeout(resetTimer); resetTimer = 0; if (resetTarget) { resetTarget.classList.remove('holding'); resetTarget = null; } }
+$('bestNote').addEventListener('pointerdown', e => {
+  const el = e.target.closest('.bl-v[data-m], .bl-t[data-all]'); if (!el) return;
+  endHold(); resetTarget = el; el.classList.add('holding');
+  const all = !!el.dataset.all, m = el.dataset.m, c = parseInt(el.dataset.c, 10);
+  resetTimer = setTimeout(() => { resetTimer = 0; el.classList.remove('holding'); resetTarget = null; showResetConfirm(all ? { all: true } : { m, c }); }, all ? 2500 : 1400);
+});
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) $('bestNote').addEventListener(ev, endHold);
+$('bestNote').addEventListener('contextmenu', e => e.preventDefault());
+$('bcNo').addEventListener('click', () => { resetPending = null; $('bestConfirm').hidden = true; });
+$('bcYes').addEventListener('click', () => {
+  const t = resetPending; resetPending = null; $('bestConfirm').hidden = true; if (!t) return;
+  if (t.all) { for (const m of ['time', 'endless']) for (const c of [4, 5, 6]) bestDel(m, c); } else bestDel(t.m, t.c);
+  best = parseInt(lsGet(bestKey(), '0'), 10) || 0; runBeat = false; renderBestList();
+});
 function applyHoleStyle() {
   const app = document.querySelector('.app');
   app.classList.toggle('hs-strong', settings.holeStyle === 'strong');
@@ -3420,7 +3458,7 @@ $('bHowBack').addEventListener('click', () => showOverlay('ready'));
 $('bAdvOpen').addEventListener('click', () => showOverlay('adv'));
 $('bAdvBack').addEventListener('click', () => showOverlay('ready'));
 $('bBestOpen').addEventListener('click', () => { renderBestList(); showOverlay('best'); });
-$('bBestBack').addEventListener('click', () => showOverlay('ready'));
+$('bBestBack').addEventListener('click', () => { resetPending = null; $('bestConfirm').hidden = true; showOverlay('ready'); });
 $('bTut').addEventListener('click', startTutorial);
 $('bFirst').addEventListener('click', startTutorial);
 $('cNext').addEventListener('click', () => {
