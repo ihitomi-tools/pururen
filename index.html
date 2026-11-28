@@ -571,7 +571,7 @@
   </section>
   <div class="timerow"><div class="timebar" id="timebar"><div class="fill" id="timefill"></div><span class="gain" id="gain" hidden></span><span id="timelab">のこり 60秒 ・ ステージ 1</span></div><div class="bonuschip" id="bonusChip" hidden aria-label="ボーナスねこ"><span class="bi" id="bonusIcon"></span><b>×1.5</b></div></div>
   <div class="feverrow" id="feverRow" hidden><div class="feverbar"><i id="feverFill"></i><span id="feverLab">フィーバーゲージ</span></div></div>
-  <button class="skillrow" id="skillRow" type="button" hidden><i id="skillFill"></i><span id="skillLab">必殺技ゲージ</span></button>
+  <button class="skillrow" id="skillRow" type="button" hidden><i id="skillFill"></i><span id="skillLab">猫の手ゲージ</span></button>
 
   <section class="coach" id="coach" hidden aria-live="polite">
     <div class="coachtop"><span class="coachstep" id="coachStep"></span><span class="coachdots" id="coachDots"></span></div>
@@ -643,11 +643,11 @@
             <span class="diffnote">しっかり＝白く光る印とふちの目盛り ／ くっきり＝さらに、行と列の帯と、空きマスの印を太く・明るくする</span></div>
           <div class="opt"><span class="lab">スタート位置（ゲームをはじめる場所）</span>
             <div class="seg" data-key="startPos"><button type="button" data-v="center">真ん中</button><button type="button" data-v="corner">右下</button></div></div>
-            <div class="opt"><span class="lab">必殺技の出しかた（HARD）</span>
+            <div class="opt"><span class="lab">猫の手の出しかた（HARD）</span>
               <div class="seg" data-key="skillTrigger"><button type="button" data-v="auto">自動</button><button type="button" data-v="manual">手動（タップ）</button></div></div>
-            <div class="opt"><span class="lab">必殺技で消す色（HARD）</span>
+            <div class="opt"><span class="lab">猫の手で消す色（HARD）</span>
               <div class="seg" data-key="skillColor"><button type="button" data-v="most">いちばん多い色</button><button type="button" data-v="bonus">ボーナス色</button><button type="button" data-v="pick">えらぶ</button></div>
-              <span class="diffnote">えらぶ＝必殺技が出たら、ゲームが止まって、下のねこをタップして色を決める</span></div>
+              <span class="diffnote">えらぶ＝猫の手が出るとき、ゲームが止まって、下のねこをタップして色を決める</span></div>
         </div>
         <div class="advbody"></div>
         <div class="note diag" id="diagNote" hidden></div>
@@ -677,7 +677,7 @@
           <li>ボーナスの色：ステージごとに、ボーナスの色が決まっている（緑→青→赤→黄→紫…の順。エンドレスは30秒ごとに交代）。その色を消すと、得点が1.5倍。時間バーの右の「ねこの絵 ×1.5」が、いまのボーナス色だよ（石のデザインが、ねこ以外でも同じ）</li>
           <li>ラッキーねこ（どの難しさでも）：ときどき、次に降ってくる予告のねこに★がつく。降りてくると、金のふちが光るパネルになって、ふちが30秒かけて時計回りに減っていく（なくなると、ふつうのパネルにもどる。塊にくっついているあいだは、減らない）。それを含む塊を消すと、得点が2倍、時間制限モードでは時間も3秒増える。HITをつなげるほど出やすくなって、同時に何個か出ることもある</li>
           <li>フィーバー（NORMAL・HARD）：HITをつなげると、時間バーの下の「フィーバーゲージ」がたまる。満タンで15秒間フィーバー！　得点が2倍になって、ゲージも長くなるので、足しやすい。フィーバー中にHITをつなげると、時間が少しずつのびる</li>
-          <li>必殺技（HARD）：消したねこが50匹たまると、1色のねこが、ぜんぶ消える！（得点 ×2）　初めは自動で出て、いちばん多い色を消す。「くわしい設定」で、手動で出したり、ボーナス色や好きな色（えらぶ）を消すこともできる。色えらびで「あとで」を押すと、必殺技はためたまま再開して、ピンクの行をタップすると、また出せる</li>
+          <li>必殺！猫の手も借りたい！（HARD）：消したねこが50匹たまると、1色のねこが、ぜんぶ消える！（得点 ×2）　初めは自動で出て、いちばん多い色を消す。「くわしい設定」で、手動で出したり、ボーナス色や好きな色（えらぶ）を消すこともできる。色えらびで「あとで」を押すと、必殺技はためたまま再開して、ピンクの行をタップすると、また出せる</li>
           <li>難しさは色の数で決まる（EASY＝4色 ／ NORMAL＝5色 ／ HARD＝6色）。色が多いほど、つなげにくいので、HARDはゲージを少し長くしてある。そのぶん、得点は難しいほど高くなる（EASY ×1 ／ NORMAL ×2 ／ HARD ×3）</li>
         </ol>
         <button class="go" id="bTut" type="button">チュートリアルをやってみる（約1分）</button>
@@ -702,11 +702,11 @@
             <div class="opt"><span class="lab">空きマスの見せ方</span>
               <div class="seg" data-key="holeStyle"><button type="button" data-v="normal">ふつう</button><button type="button" data-v="strong">しっかり</button><button type="button" data-v="clear">くっきり</button></div>
               <span class="diffnote">しっかり＝白く光る印とふちの目盛り ／ くっきり＝さらに、行と列の帯と、空きマスの印を太く・明るくする</span></div>
-            <div class="opt"><span class="lab">必殺技の出しかた（HARD）</span>
+            <div class="opt"><span class="lab">猫の手の出しかた（HARD）</span>
               <div class="seg" data-key="skillTrigger"><button type="button" data-v="auto">自動</button><button type="button" data-v="manual">手動（タップ）</button></div></div>
-            <div class="opt"><span class="lab">必殺技で消す色（HARD）</span>
+            <div class="opt"><span class="lab">猫の手で消す色（HARD）</span>
               <div class="seg" data-key="skillColor"><button type="button" data-v="most">いちばん多い色</button><button type="button" data-v="bonus">ボーナス色</button><button type="button" data-v="pick">えらぶ</button></div>
-              <span class="diffnote">えらぶ＝必殺技が出たら、ゲームが止まって、下のねこをタップして色を決める</span></div>
+              <span class="diffnote">えらぶ＝猫の手が出るとき、ゲームが止まって、下のねこをタップして色を決める</span></div>
           </div>
           <div class="advbody"></div>
         </details>
@@ -1370,7 +1370,7 @@ function vanish(g) {
   const feverNow = fever > 0;
   const pts = Math.round((100 * n + 50) * mult * (bonus ? BONUS_MUL : 1) * (lucky ? luckyK : 1) * (feverNow ? FEVER_MUL : 1) * (g.mul || 1) * diffMul());
   if (lucky) { if (settings.mode === 'time') addTime(luckyN * LUCKY_SEC * 100 / START_SEC); sfx.lucky(); }
-  const tags = []; if (bonus) tags.push('ボーナス ×' + BONUS_MUL); if (lucky) tags.push('★ラッキー ×' + luckyK); if (feverNow) tags.push('FEVER ×' + FEVER_MUL); if (g.mul) tags.push('ぜんぶ消し ×' + g.mul);
+  const tags = []; if (bonus) tags.push('ボーナス ×' + BONUS_MUL); if (lucky) tags.push('★ラッキー ×' + luckyK); if (feverNow) tags.push('FEVER ×' + FEVER_MUL); if (g.mul) tags.push('猫の手 ×' + g.mul);
   score += pts; cleared += n;
   if (!g.mul) skillAdd(n);
   cheerHop(g.color, true);
@@ -1664,7 +1664,7 @@ function skillRun(color) {
   chain.hit++; chain.idle = 0; maxHit = Math.max(maxHit, chain.hit);
   const g = { id: nextGroupId++, color, members, t: 0, gm: gaugeMs(), hit: chain.hit, mul: SKILL_MUL, flash: false, epoch: 1 };
   skillGauge = 0; skillReady = false; sfx.skill();
-  showToast('必殺技！　' + COLOR_NAME[color] + 'ぜんぶ消し　×' + SKILL_MUL);
+  showToast('必殺！猫の手も借りたい！　' + COLOR_NAME[color] + 'ぜんぶ消し　×' + SKILL_MUL);
   pulseHit(color); cheerHop(color, true);
   vanish(g);
 }
@@ -1675,7 +1675,7 @@ function renderSkill() {
   const rdy = skillReady && !picking;
   if (rdy !== skillLastReady) { row.classList.toggle('ready', rdy); skillLastReady = rdy; }
   const v = skillReady ? 1 : skillGauge / SKILL_NEED;
-  const txt = rdy ? (settings.skillTrigger === 'auto' && !skillHold ? '必殺技！' : '必殺技！　タップして発動') : picking ? '色をえらんでね' : '必殺技ゲージ　' + skillGauge + ' / ' + SKILL_NEED;
+  const txt = rdy ? (settings.skillTrigger === 'auto' && !skillHold ? '猫の手を借りる！' : '猫の手を借りる！　タップして発動') : picking ? '色をえらんでね' : '猫の手ゲージ　' + skillGauge + ' / ' + SKILL_NEED;
   if (txt !== skillLast) { $('skillLab').textContent = txt; skillLast = txt; $('skillFill').style.setProperty('--s', v.toFixed(3)); }
   else if (!rdy) $('skillFill').style.setProperty('--s', v.toFixed(3));
 }
